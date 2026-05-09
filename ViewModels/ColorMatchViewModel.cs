@@ -149,6 +149,10 @@ namespace MyCraftyStash.ViewModels
 
         public void Reload()
         {
+            // Re-attempt seeding in case the first try ran before migrations
+            // had landed. EnsureSeeded short-circuits when it already
+            // succeeded, so this is cheap on the happy path.
+            _service.EnsureSeeded();
             var matches = _service.GetAll(System);
             var owned = _service.GetOwnedTeColorNames();
             _all = matches.Select(m => new ColorMatchRow

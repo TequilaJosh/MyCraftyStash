@@ -154,22 +154,34 @@ namespace MyCraftyStash.Services
                 try
                 {
                     using var ctx = CreateContext();
-                    SeedSystem(ctx, SystemDmc, DmcSeed);
-                    SeedSystem(ctx, SystemOlo, OloSeed);
+                    // Defense in depth — UserSettingsService.Load also runs
+                    // Migrate at startup, but if that path was skipped (or
+                    // the migration crashed mid-way on a previous run) the
+                    // color_matches table may not exist yet. Rerun here so
+                    // the seed never fires against a missing table.
+                    ctx.Database.Migrate();
+                    var dmcAdded = SeedSystem(ctx, SystemDmc, DmcSeed);
+                    var oloAdded = SeedSystem(ctx, SystemOlo, OloSeed);
+                    LoggingService.LogInfo($"ColorMatchService seeded: DMC inserts={dmcAdded}, OLO inserts={oloAdded}");
+                    // Only short-circuit future calls when the run actually
+                    // succeeded — otherwise the next Refresh / re-open of
+                    // the page can retry instead of being stuck empty.
+                    _seeded = true;
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogDatabaseError(ex, "ColorMatchService.EnsureSeeded");
+                    // Leave _seeded false so the user can hit Refresh and try again.
                 }
-                _seeded = true;
             }
         }
 
-        private static void SeedSystem(SettingsDbContext ctx, string system,
+        private static int SeedSystem(SettingsDbContext ctx, string system,
             (string TeColor, string Code, string? Notes)[] entries)
         {
             // Skip if anything already exists for this system — user edits win.
-            if (ctx.ColorMatches.Any(c => c.System == system)) return;
+            if (ctx.ColorMatches.Any(c => c.System == system)) return 0;
+            int added = 0;
             foreach (var (teColor, code, notes) in entries)
             {
                 if (string.IsNullOrWhiteSpace(code)) continue;
@@ -180,8 +192,10 @@ namespace MyCraftyStash.Services
                     TeColorName  = teColor,
                     Notes        = notes,
                 });
+                added++;
             }
             ctx.SaveChanges();
+            return added;
         }
 
         // DMC floss matches — provided 2026-05-08.
