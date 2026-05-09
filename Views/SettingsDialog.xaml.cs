@@ -63,7 +63,50 @@ namespace MyCraftyStash.Views
             LoadCustomSortTab();
             LoadTrackedItemsTab();
             await LoadProjectTrackedItemsTabAsync();
+            LoadCatalogSourcesTab();
             _isLoadingSettings = false;
+        }
+
+        // ── Catalog Sources tab ──────────────────────────────────────────────
+
+        public class CatalogSourceRow
+        {
+            public string Id { get; init; } = string.Empty;
+            public string DisplayName { get; init; } = string.Empty;
+            public string Domain { get; init; } = string.Empty;
+            public bool IsStub { get; init; }
+            public bool IsToggleable => !IsStub;
+            public bool IsEnabled { get; set; }
+            public string StatusText => IsStub
+                ? "Custom site — scraper TBD"
+                : IsEnabled ? "Active" : "Disabled";
+        }
+
+        private void LoadCatalogSourcesTab()
+        {
+            var rows = new System.Collections.Generic.List<CatalogSourceRow>();
+            foreach (var p in CatalogLookupService.Providers)
+            {
+                var isStub = p is MyCraftyStash.Services.Catalog.StubCatalogProvider;
+                rows.Add(new CatalogSourceRow
+                {
+                    Id          = p.Id,
+                    DisplayName = p.DisplayName,
+                    Domain      = p.Domain,
+                    IsStub      = isStub,
+                    IsEnabled   = !isStub && CatalogLookupService.IsEnabled(p.Id),
+                });
+            }
+            CatalogSourcesList.ItemsSource = rows;
+        }
+
+        private void CatalogSource_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox cb && cb.DataContext is CatalogSourceRow row)
+            {
+                CatalogLookupService.SetEnabled(row.Id, cb.IsChecked == true);
+                WasSaved = true;
+            }
         }
 
         private void LoadDisplaySettings()

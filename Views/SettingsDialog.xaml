@@ -1036,6 +1036,81 @@
                 </Border>
             </TabItem>
 
+            <TabItem Header="Catalog Sources" Style="{StaticResource SidebarTabItem}">
+                <Border Style="{StaticResource ContentPanel}" Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Style="{StaticResource SectionHeading}" Text="Catalog sources"/>
+                            <TextBlock Style="{StaticResource SectionHelp}"
+                                       Text="When you click ‘Look Up Item’, every enabled retailer is searched in parallel and results are merged with a source badge. Toggle a row to add or remove that retailer from your searches. Stubbed sources have no scraper yet — they're listed for future support."/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1"
+                                Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6">
+                            <ListView x:Name="CatalogSourcesList"
+                                      Background="Transparent" BorderThickness="0"
+                                      Foreground="{DynamicResource TextBrush}"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="0,0,0,1"
+                                                Padding="14,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                          IsEnabled="{Binding IsToggleable}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,12,0"
+                                                          Click="CatalogSource_Toggled"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13"/>
+                                                        <Border Padding="6,1" Margin="8,0,0,0"
+                                                                CornerRadius="3"
+                                                                Background="{DynamicResource SidebarBrush}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1"
+                                                                Visibility="{Binding IsStub, Converter={StaticResource BoolToVisConverter}}">
+                                                            <TextBlock Text="not yet supported" FontSize="10"
+                                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Domain}" FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" VerticalAlignment="Center"
+                                                           FontSize="11" FontStyle="Italic"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           Text="{Binding StatusText}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Border>
+                    </Grid>
+                </Border>
+            </TabItem>
+
             <!-- The "Version" tab moved to the new About dialog (sidebar →
                  About) so it isn't buried under Settings. -->
 
