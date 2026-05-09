@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MyCraftyStash.Data;
 using MyCraftyStash.Models;
+using IDb = MyCraftyStash.Data.InventoryDbContext;
 
 namespace MyCraftyStash.Services
 {
@@ -23,6 +24,43 @@ namespace MyCraftyStash.Services
         public ColorMatchService()
         {
             EnsureSeeded();
+        }
+
+        /// <summary>
+        /// TE colors the user already owns, drawn from inventory items whose
+        /// Name matches a TE color name and whose Type is one of the
+        /// colored-product categories (inks, watercolor, cardstock, envelopes).
+        /// Returned as a HashSet so per-row owned-status checks are O(1).
+        /// </summary>
+        public HashSet<string> GetOwnedTeColorNames()
+        {
+            var owned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using var ctx = new IDb();
+                // Mirrors InventoryService.ColorSortedTypes — kept in sync by
+                // intent, not by code reference, since this service lives in
+                // settings-land but reads inventory.
+                var coloredTypes = new[]
+                {
+                    "Ink - Full Size", "Ink - Mini", "Ink - Refill",
+                    "Watercolor", "Cardstock",
+                    "A2 Envelopes", "A7 Envelopes", "Mini Slim Envelopes",
+                };
+                var names = ctx.Items.AsNoTracking()
+                    .Where(i => coloredTypes.Contains(i.Type))
+                    .Select(i => i.Name)
+                    .ToList();
+                foreach (var n in names)
+                {
+                    if (!string.IsNullOrWhiteSpace(n)) owned.Add(n.Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, "ColorMatchService.GetOwnedTeColorNames");
+            }
+            return owned;
         }
 
         public List<ColorMatch> GetAll(string system)

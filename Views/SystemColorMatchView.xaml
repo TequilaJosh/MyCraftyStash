@@ -6,6 +6,7 @@
     <Grid Margin="20,16,20,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -22,7 +23,10 @@
                 </TextBlock>
                 <TextBlock Margin="0,2,0,0" FontSize="12"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           Text="Look up the closest Taylored Expressions color for any code."/>
+                           Text="Hover any row to see what to order. ✓ marks colors already in your stash."/>
+                <TextBlock Margin="0,4,0,0" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryBrush}"
+                           Text="{Binding SummaryText, Mode=OneWay}"/>
             </StackPanel>
 
             <TextBox Grid.Column="1" Width="220" Height="32" VerticalContentAlignment="Center"
@@ -33,8 +37,50 @@
                      BorderBrush="{DynamicResource BorderBrush}"/>
         </Grid>
 
+        <!-- Filter chips: All / Owned / Missing -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <RadioButton GroupName="ColorFilter"
+                         IsChecked="{Binding ShowAll, Mode=TwoWay}"
+                         Style="{StaticResource {x:Type ToggleButton}}"
+                         Margin="0,0,8,0" Padding="14,6" Cursor="Hand"
+                         Background="{DynamicResource CardBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         Content="All"/>
+            <RadioButton GroupName="ColorFilter"
+                         IsChecked="{Binding ShowOwned, Mode=TwoWay}"
+                         Style="{StaticResource {x:Type ToggleButton}}"
+                         Margin="0,0,8,0" Padding="14,6" Cursor="Hand"
+                         Background="{DynamicResource CardBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="✓ Owned" FontWeight="SemiBold"/>
+                </StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ColorFilter"
+                         IsChecked="{Binding ShowMissing, Mode=TwoWay}"
+                         Style="{StaticResource {x:Type ToggleButton}}"
+                         Margin="0,0,8,0" Padding="14,6" Cursor="Hand"
+                         Background="{DynamicResource CardBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="○ Missing" FontWeight="SemiBold"/>
+                </StackPanel>
+            </RadioButton>
+
+            <Button Margin="12,0,0,0" Padding="10,6" Cursor="Hand"
+                    Background="Transparent"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    Command="{Binding RefreshCommand}"
+                    ToolTip="Re-check inventory and refresh ownership status."
+                    Content="↻ Refresh"/>
+        </StackPanel>
+
         <!-- Match table -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBrush}"
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 CornerRadius="8">
             <DataGrid ItemsSource="{Binding Filtered}"
@@ -52,6 +98,21 @@
                       BorderThickness="0"
                       Foreground="{DynamicResource TextBrush}"
                       HorizontalGridLinesBrush="{DynamicResource BorderBrush}">
+                <!-- Per-row hover tooltip: "Order DMC 902 to match Mulled Wine." -->
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="ToolTip" Value="{Binding HoverHint}"/>
+                        <Setter Property="ToolTipService.InitialShowDelay" Value="350"/>
+                        <Setter Property="ToolTipService.ShowDuration" Value="8000"/>
+                        <Style.Triggers>
+                            <!-- Owned rows get a subtle green tint so the
+                                 page reads as a quick visual completeness map. -->
+                            <DataTrigger Binding="{Binding IsOwned}" Value="True">
+                                <Setter Property="Background" Value="#225F7A5C"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="{DynamicResource SidebarBrush}"/>
@@ -63,6 +124,22 @@
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
+                    <DataGridTextColumn Header="Owned" Binding="{Binding OwnedGlyph}" Width="64">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontSize" Value="14"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOwned}" Value="True">
+                                        <Setter Property="Foreground" Value="#5F7A5C"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Code" Binding="{Binding ExternalCode}" Width="120">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
