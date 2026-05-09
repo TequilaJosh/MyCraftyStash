@@ -24,6 +24,15 @@ namespace MyCraftyStash.Models
         /// product detail JSON for SKU + extra images. Not shown in the UI.</summary>
         public string?  Handle     { get; set; }
 
+        /// <summary>Display name of the catalog provider that produced this result
+        /// (e.g. "Taylored Expressions", "Simon Says Stamp"). Surfaces as a small
+        /// badge on result cards so the user can tell sources apart.</summary>
+        public string?  Source     { get; set; }
+
+        /// <summary>Stable provider ID (e.g. "te", "sss") used internally for
+        /// dedupe and per-provider enrichment dispatch.</summary>
+        public string?  SourceId   { get; set; }
+
         public List<string> ExtraImages { get; set; } = new();
 
         /// <summary>True when an item with this ItemNumber already exists in the local

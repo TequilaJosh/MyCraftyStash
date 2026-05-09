@@ -327,6 +327,40 @@ namespace MyCraftyStash.Services
             }
         }
 
+        // ── Generic kv accessors for misc app-wide flags ─────────────────────
+        // Used by features that don't fit the typed UserSettings shape (e.g.
+        // per-catalog-provider enable flags). Reads and writes go straight to
+        // settings.db.kv_settings without touching the in-memory _current.
+
+        public static string? GetSettingValue(string key)
+        {
+            try
+            {
+                using var ctx = CreateContext();
+                return ctx.KvSettings.AsNoTracking()
+                    .FirstOrDefault(k => k.Key == key)?.Value;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"UserSettingsService.GetSettingValue({key})");
+                return null;
+            }
+        }
+
+        public static void SetSettingValue(string key, string? value)
+        {
+            try
+            {
+                using var ctx = CreateContext();
+                UpsertKv(ctx, key, value);
+                ctx.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"UserSettingsService.SetSettingValue({key})");
+            }
+        }
+
         // ── Subtypes (lives in ConfigStore so it shares the same DB) ─────────
 
         private static Dictionary<string, List<string>>? _subtypes;
