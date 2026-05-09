@@ -32,7 +32,8 @@
                         <MouseBinding MouseAction="LeftClick" Command="{Binding ShowCalendarCommand}"/>
                     </Border.InputBindings>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📅" FontSize="15" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="▣" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
                         <TextBlock Text="Calendar" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -65,7 +66,8 @@
                         <MouseBinding MouseAction="LeftClick" Command="{Binding ShowAddressBookCommand}"/>
                     </Border.InputBindings>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📋" FontSize="15" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="☰" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
                         <TextBlock Text="Address Book" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
