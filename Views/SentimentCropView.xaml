@@ -1,0 +1,347 @@
+<Window x:Class="MyCraftyStash.Views.SentimentCropView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:MyCraftyStash.Converters"
+        Title="Crop Sentiment" 
+        Width="1000" Height="820"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+    
+    <Window.Resources>
+        <converters:Base64ImageConverter x:Key="Base64ImageConverter"/>
+    </Window.Resources>
+    
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">
+            <TextBlock Text="Crop Sentiment from Image" 
+                       FontSize="20" 
+                       FontWeight="Bold" 
+                       Foreground="{DynamicResource TextBrush}"/>
+            <TextBlock Text="Click and drag on the image to select the area to crop. Then enter the sentiment text and click Save." 
+                       FontSize="13" 
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       Margin="0,4,0,0"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+        
+        <!-- Main Image with Selection -->
+        <Border Grid.Row="1" Grid.Column="0" 
+                Background="{DynamicResource SidebarBrush}" 
+                CornerRadius="8"
+                Margin="0,0,16,0"
+                ClipToBounds="True">
+            <ScrollViewer x:Name="ImageScrollViewer"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          PreviewMouseWheel="ImageScrollViewer_PreviewMouseWheel">
+                <Grid x:Name="ImageContainer"
+                      MouseLeftButtonDown="ImageContainer_MouseDown"
+                      MouseMove="ImageContainer_MouseMove"
+                      MouseLeftButtonUp="ImageContainer_MouseUp"
+                      Cursor="Cross"
+                      Background="Transparent">
+                    <Grid.LayoutTransform>
+                        <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
+                    </Grid.LayoutTransform>
+                    <Image x:Name="SourceImage"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                    <Canvas x:Name="SelectionCanvas" 
+                            IsHitTestVisible="False"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch">
+                        <Rectangle x:Name="SelectionRect"
+                                   Stroke="{DynamicResource CropGuidePrimaryBrush}"
+                                   StrokeThickness="2"
+                                   StrokeDashArray="5 3"
+                                   Fill="{DynamicResource CropGuidePrimaryFillBrush}"
+                                   Visibility="Collapsed"/>
+                    </Canvas>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Right Panel - Preview and Controls -->
+        <Border Grid.Row="1" Grid.Column="1" 
+                Background="{DynamicResource CardBrush}" 
+                CornerRadius="8"
+                Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="150"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Preview" 
+                           FontWeight="SemiBold" 
+                           Foreground="{DynamicResource TextBrush}"
+                           Margin="0,0,0,8"/>
+                
+                <!-- Cropped Preview -->
+                <Border Grid.Row="1" 
+                        Background="{DynamicResource SidebarBrush}" 
+                        CornerRadius="4"
+                        Padding="8">
+                    <Image x:Name="PreviewImage" 
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                </Border>
+                
+                <!-- Sentiment Text Input -->
+                <StackPanel Grid.Row="2" Margin="0,16,0,0">
+                    <TextBlock Text="Sentiment Text" 
+                               FontWeight="SemiBold" 
+                               Foreground="{DynamicResource TextBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="SentimentTextBox"
+                             Background="{DynamicResource SidebarBrush}"
+                             Foreground="{DynamicResource TextBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             Padding="8"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             Height="80"
+                             VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+                
+                <!-- Quick Select from Item Sentiments -->
+                <StackPanel Grid.Row="3" Margin="0,16,0,0">
+                    <TextBlock x:Name="SentimentsLabel"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Margin="0,0,0,4"/>
+                    <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+                        <ListBox x:Name="SentimentsList"
+                                 Background="{DynamicResource SidebarBrush}"
+                                 BorderThickness="1"
+                                 BorderBrush="{DynamicResource BorderBrush}"
+                                 SelectionChanged="SentimentsList_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" 
+                                               Foreground="{DynamicResource TextBrush}"
+                                               TextWrapping="Wrap"
+                                               Padding="6,4"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Image Selection -->
+        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                    Orientation="Horizontal" 
+                    Margin="0,16,16,0">
+            <TextBlock Text="Image:" 
+                       VerticalAlignment="Center" 
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       Margin="0,0,8,0"/>
+            <ComboBox x:Name="ImageSelector"
+                      Width="200"
+                      Background="{DynamicResource SidebarBrush}"
+                      Foreground="{DynamicResource TextBrush}"
+                      SelectionChanged="ImageSelector_SelectionChanged"/>
+            <Button x:Name="ClearSelectionButton"
+                    Content="Clear Selection"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="16,0,0,0"
+                    Click="ClearSelection_Click"/>
+            <!-- Zoom controls -->
+            <TextBlock Text="Zoom:" 
+                       VerticalAlignment="Center" 
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       Margin="16,0,8,0"/>
+            <Button Width="32" Height="32"
+                    Margin="0,0,4,0"
+                    Click="ZoomOut_Click"
+                    ToolTip="Zoom Out (Ctrl+Wheel also works)"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent"
+                                BorderBrush="{DynamicResource DangerBrush}"
+                                BorderThickness="2"
+                                CornerRadius="4">
+                            <TextBlock Text="−"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource DangerBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <TextBlock x:Name="ZoomLabel"
+                       Text="100%"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextBrush}"
+                       Width="45"
+                       TextAlignment="Center"/>
+            <Button Width="32" Height="32"
+                    Margin="4,0,8,0"
+                    Click="ZoomIn_Click"
+                    ToolTip="Zoom In (Ctrl+Wheel also works)"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent"
+                                BorderBrush="{DynamicResource CropGuideSecondaryBrush}"
+                                BorderThickness="2"
+                                CornerRadius="4">
+                            <TextBlock Text="+"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource CropGuideSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Content="Reset"
+                    Style="{StaticResource SecondaryButton}"
+                    Height="32"
+                    MinWidth="60"
+                    Padding="12,0"
+                    Margin="0,0,0,0"
+                    Click="ZoomReset_Click"/>
+        </StackPanel>
+        
+        <!-- Status Message -->
+        <TextBlock x:Name="StatusText" 
+                   Grid.Row="2" Grid.Column="1" 
+                   Foreground="{DynamicResource PrimaryBrush}"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Margin="0,16,0,0"/>
+        
+        
+        <!-- Saved Sentiments Strip -->
+        <Border Grid.Row="3" Grid.ColumnSpan="2"
+                x:Name="SavedSentimentsPanel"
+                Visibility="Collapsed"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Margin="0,12,0,0"
+                Padding="16,12">
+            <StackPanel>
+                <TextBlock Text="Saved this session" 
+                           FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryBrush}"
+                           Margin="0,0,0,10"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              MaxHeight="140">
+                    <ItemsControl x:Name="SavedSentimentsItems">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="130"
+                                        Margin="0,0,12,0"
+                                        CornerRadius="6"
+                                        Background="{DynamicResource SidebarBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="80"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <!-- Snip image -->
+                                        <Image Grid.Row="0"
+                                               Source="{Binding ImageData, Converter={StaticResource Base64ImageConverter}}"
+                                               Stretch="Uniform"
+                                               Margin="6,6,6,4"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                        <!-- Sentiment text label -->
+                                        <TextBlock Grid.Row="1"
+                                                   Text="{Binding ExtractedText}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   TextWrapping="Wrap"
+                                                   TextAlignment="Center"
+                                                   MaxHeight="40"
+                                                   Margin="6,0,6,4"/>
+                                        <!-- Delete button -->
+                                        <Button Grid.Row="0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Margin="0,4,4,0"
+                                                Width="22" Height="22"
+                                                Tag="{Binding Id}"
+                                                Click="DeleteSavedSentiment_Click"
+                                                ToolTip="Remove this sentiment"
+                                                Cursor="Hand">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{DynamicResource CropGuideHotSoftBrush}"
+                                                            CornerRadius="11"
+                                                            x:Name="Bd">
+                                                        <TextBlock Text="✕"
+                                                                   FontSize="10"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="White"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CropGuideHotBrush}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+
+        <!-- Bottom Buttons -->
+        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,12,0,0">
+            <Button x:Name="SaveButton"
+                    Content="Save Sentiment"
+                    Style="{StaticResource PrimaryButton}"
+                    Margin="0,0,12,0"
+                    IsEnabled="False"
+                    Click="SaveButton_Click"/>
+            <Button Content="Close"
+                    Style="{StaticResource SecondaryButton}"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

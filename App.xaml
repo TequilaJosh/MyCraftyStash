@@ -1,0 +1,953 @@
+<Application x:Class="MyCraftyStash.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MyCraftyStash"
+             xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:views="clr-namespace:MyCraftyStash.Views"
+             xmlns:converters="clr-namespace:MyCraftyStash.Converters"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+            <converters:InverseCountToVisibilityConverter x:Key="InverseCountToVisConverter"/>
+            <converters:GreaterThanOneToVisibilityConverter x:Key="GreaterThanOneToVisConverter"/>
+            <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisConverter"/>
+            <converters:Base64ImageConverter x:Key="Base64ImageConverter"/>
+            <converters:LazyThumbnailConverter x:Key="LazyThumbnailConverter"/>
+            <converters:LazyInspirationThumbnailConverter x:Key="LazyInspirationThumbnailConverter"/>
+            <converters:StringEqualsConverter x:Key="StringEqualsConverter"/>
+            <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
+            <converters:StringEqualsVisibilityConverter x:Key="StringEqualsVisConverter"/>
+            <converters:EqualityConverter x:Key="EqualityConverter"/>
+            <converters:ZeroToVisibilityConverter x:Key="ZeroToVisConverter"/>
+            <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
+            <converters:StringContainsVisibilityConverter x:Key="StringContainsVisConverter"/>
+            <converters:TypeWithSubtypeConverter x:Key="TypeWithSubtypeConverter"/>
+            <converters:IsTrackedTypeConverter x:Key="IsTrackedTypeConverter"/>
+            <converters:StockLevelForegroundConverter x:Key="StockLevelFgConverter"/>
+            <converters:StockLevelBackgroundConverter x:Key="StockLevelBgConverter"/>
+            <converters:AsyncThumbnailConverter x:Key="AsyncThumbnailConverter"/>
+            <converters:AsyncInspirationThumbnailConverter x:Key="AsyncInspirationThumbnailConverter"/>
+            <converters:HexToBrushConverter x:Key="HexToBrushConverter"/>
+            <converters:UrlToDomainConverter x:Key="UrlToDomainConverter"/>
+                        <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+                <views:HomeView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:InventoryViewModel}">
+                <views:InventoryView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ProjectsViewModel}">
+                <views:ProjectsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:InspirationViewModel}">
+                <views:InspirationView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SentimentSearchViewModel}">
+                <views:SentimentSearchView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:StockTrackingViewModel}">
+                <views:StockTrackingView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SocialViewModel}">
+                <views:SocialView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:WishlistViewModel}">
+                <views:WishlistView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PurchaseReportViewModel}">
+                <views:PurchaseReportView />
+            </DataTemplate>
+            
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █                    SECTION 1  ·  COLOR BRUSHES                       █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            These hex values are the LIGHT-MODE STATIC FALLBACKS. The active
+            running theme is applied at runtime by
+                  Services/ThemeService.cs  →  ApplyTheme()
+            so if you change a brush KEY here you must add the same key in BOTH
+            branches (light + dark) of that file. If you only change the COLOR,
+            update both this file *and* the matching FromRgb/FromArgb call in
+            ThemeService.cs so light + dark stay in sync.
+            -->
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1A · BRAND / ACCENT
+                 ───────────────────────────────────────────────────────────────
+                 PrimaryBrush      ▸ Crimson — used for the dominant brand color:
+                                     primary buttons (Save, Run Report, Search,
+                                     New Item), the title-bar logo square, the
+                                     page tab indicator, low-stock numbers, the
+                                     stock-tracker active tab underline, focal
+                                     selected-image outlines, the wizard's
+                                     "Done!" pill fill, and most icons that
+                                     should "pop" on cream.
+                 PrimaryLightBrush ▸ Lighter crimson — hover state of primary
+                                     buttons + chip selection highlights.
+                 PrimarySoftBrush  ▸ Pale pink — soft alert backgrounds, the
+                                     "Out / Low" pill backgrounds on Stock
+                                     Tracker, banner backgrounds for error
+                                     messages.
+                 AccentBrush       ▸ Secondary accent (currently identical to
+                                     PrimaryBrush). Used by the Projects view
+                                     for tag pills + the Save Creation button —
+                                     change this if you want project-specific
+                                     accents to drift from the main brand.
+            -->
+            <SolidColorBrush x:Key="PrimaryBrush"      Color="#A82C32"/>
+            <SolidColorBrush x:Key="PrimaryLightBrush" Color="#C03A41"/>
+            <SolidColorBrush x:Key="PrimarySoftBrush"  Color="#F8E0E1"/>
+            <SolidColorBrush x:Key="AccentBrush"       Color="#A82C32"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1B · STATUS COLORS  (success / warn / danger)
+                 ───────────────────────────────────────────────────────────────
+                 SuccessBrush     ▸ Green — "in stock" stock numbers, "Saved"
+                                    confirmation labels, settings status dots.
+                 SuccessSoftBrush ▸ Pale green — toast/banner backgrounds for
+                                    successful actions (e.g. "Address saved").
+                 WarnBrush        ▸ Amber — "low" status dot in Settings, mid-
+                                    severity warning labels.
+                 WarnSoftBrush    ▸ Pale amber — wishlist priority "Medium" pill.
+                 DangerBrush      ▸ Red — error messages, "Delete" action text,
+                                    out-of-stock indicators, validation errors.
+                                    NOTE: currently shares the crimson value
+                                    with PrimaryBrush; split if you want
+                                    errors to look different from the brand.
+                 DangerSoftBrush  ▸ Pale red — soft error banner backgrounds,
+                                    delete-button hover backgrounds, wishlist
+                                    "High" priority pills.
+            -->
+            <SolidColorBrush x:Key="SuccessBrush"     Color="#3F8F62"/>
+            <SolidColorBrush x:Key="SuccessSoftBrush" Color="#E2EFE6"/>
+            <SolidColorBrush x:Key="WarnBrush"        Color="#C77A2A"/>
+            <SolidColorBrush x:Key="WarnSoftBrush"    Color="#F4E5D0"/>
+            <SolidColorBrush x:Key="DangerBrush"      Color="#A82C32"/>
+            <SolidColorBrush x:Key="DangerSoftBrush"  Color="#F8E0E1"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1C · SURFACES  (the things the rest of the UI sits on)
+                 ───────────────────────────────────────────────────────────────
+                 BackgroundBrush      ▸ The cream wash behind all main content
+                                        — fills the area to the right of the
+                                        sidebar in every view.
+                 SurfaceBrush         ▸ White — the new "panel" background. Used
+                                        by PanelCard (Home stat cards, Running
+                                        low panel, Recent projects) and the new
+                                        wizard SectionCard.
+                 CardBrush            ▸ White — legacy card background still
+                                        used by Inventory cards, Settings
+                                        sub-panels, the wizard's right-rail
+                                        summary cards. Currently the same as
+                                        SurfaceBrush; split if you want legacy
+                                        cards to differ.
+                 MultiPickerBrush     ▸ Background of the multi-select popups
+                                        (subtype filter, theme picker).
+                 InputBackgroundBrush ▸ Background of every text box, combo
+                                        box, search bar, date picker.
+                 BadgeBrush           ▸ Soft tan — the small type-pill chip on
+                                        Inventory cards, the count badge in the
+                                        sidebar nav, the rounded square icon
+                                        backgrounds on Home running-low rows,
+                                        wishlist "low priority" chips.
+            -->
+            <SolidColorBrush x:Key="BackgroundBrush"      Color="#F2EEE6"/>
+            <!-- Surfaces are intentionally NOT pure white — pure #FFFFFF jars
+                 against the warm cream BackgroundBrush. These are a soft warm
+                 off-white that still reads as "card on a tinted page". -->
+            <SolidColorBrush x:Key="SurfaceBrush"         Color="#F6F2EB"/>
+            <SolidColorBrush x:Key="CardBrush"            Color="#F6F2EB"/>
+            <SolidColorBrush x:Key="MultiPickerBrush"     Color="#F6F2EB"/>
+            <SolidColorBrush x:Key="InputBackgroundBrush" Color="#F6F2EB"/>
+            <SolidColorBrush x:Key="BadgeBrush"           Color="#E0DAC9"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1D · BORDERS
+                 ───────────────────────────────────────────────────────────────
+                 BorderBrush     ▸ The standard 1px hairline used by panel
+                                   cards, inputs, dropdowns, the sidebar/content
+                                   divider, the title bar bottom edge.
+                 BorderSoftBrush ▸ Lighter version — used by the Home dashboard
+                                   project tiles, progress bar tracks, and
+                                   subtle internal dividers.
+            -->
+            <SolidColorBrush x:Key="BorderBrush"     Color="#E1DCD0"/>
+            <SolidColorBrush x:Key="BorderSoftBrush" Color="#ECE7DB"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1E · TEXT
+                 ───────────────────────────────────────────────────────────────
+                 TextBrush      ▸ The default body text color (almost-black warm
+                                  brown). Used for headings, item names, list
+                                  rows, button labels on light surfaces.
+                 TextMutedBrush ▸ Warm grey — secondary/inactive text:
+                                  breadcrumbs, page subtitles, sidebar section
+                                  headers (OVERVIEW / STASH / MAKE / REPORTS),
+                                  card SKUs, "X items across N categories"
+                                  hints, placeholder text.
+            -->
+            <SolidColorBrush x:Key="TextBrush"      Color="#1E1B17"/>
+            <SolidColorBrush x:Key="TextMutedBrush" Color="#7A7264"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1F · SIDEBAR + WINDOW CHROME
+                 ───────────────────────────────────────────────────────────────
+                 SidebarBrush         ▸ The cream sidebar panel itself.
+                 SidebarHoverBrush    ▸ Slightly darker tan shown when you hover
+                                        a nav item or the inventory/projects
+                                        expand toggles.
+                 SidebarSelectedBrush ▸ White — the lifted "selected" state of
+                                        the active nav item; also the brand
+                                        card background at the top of the
+                                        sidebar.
+                 TitleBarBrush        ▸ Near-black bar at the very top of the
+                                        window (the dark band with the J chip
+                                        and "My Stash" tab).
+                 TitleBarTextBrush    ▸ Cream text shown on TitleBarBrush —
+                                        keep contrast with TitleBarBrush high.
+                 TabActiveBrush       ▸ The "My Stash" tab on the title bar —
+                                        same cream as the page background so
+                                        the tab visually merges into the body.
+            -->
+            <SolidColorBrush x:Key="SidebarBrush"         Color="#EBE6D9"/>
+            <SolidColorBrush x:Key="SidebarHoverBrush"    Color="#E0DAC9"/>
+            <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#F6F2EB"/>
+            <SolidColorBrush x:Key="TitleBarBrush"        Color="#7F1D1D"/>
+            <SolidColorBrush x:Key="TitleBarTextBrush"    Color="#F2EEE6"/>
+            <SolidColorBrush x:Key="TabActiveBrush"       Color="#F2EEE6"/>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 1G · OVERLAYS + FUNCTIONAL CROP GUIDES
+                 ───────────────────────────────────────────────────────────────
+                 These are NOT theme colors — they're functional UI affordances.
+                 You usually only touch them if you're tweaking the sentiment
+                 OCR cropping tool or the inspiration image gallery.
+
+                 OverlayDimBrush          ▸ 50% black scrim used over inspiration
+                                            images during organize-mode.
+                 OverlayHeavyBrush        ▸ 80% black scrim — full-screen image
+                                            preview backdrop.
+                 OverlayTextBrush         ▸ 80% white text shown ON TOP of an
+                                            image (caption labels in the
+                                            inspiration overlay).
+                 CropGuidePrimaryBrush    ▸ The red rectangle drawn around the
+                                            sentiment-OCR crop region in
+                                            SentimentCropView.
+                 CropGuidePrimaryFillBrush▸ The semi-transparent red fill of
+                                            that same rectangle.
+                 CropGuideSecondaryBrush  ▸ Purple — the manual-selection box
+                                            when a user hand-picks a sentiment.
+                 CropGuideHotBrush        ▸ Bright red — hover/active state on
+                                            crop handles.
+                 CropGuideHotSoftBrush    ▸ Translucent dark red — pressed
+                                            state of the crop confirmation.
+                 SentimentSelectionBrush  ▸ Cyan tint — highlighted sentiment
+                                            text in search results.
+                 SentimentTooltipBrush    ▸ Translucent white — sentiment hover
+                                            tooltip backgrounds.
+            -->
+            <SolidColorBrush x:Key="OverlayDimBrush"            Color="#80000000"/>
+            <SolidColorBrush x:Key="OverlayHeavyBrush"          Color="#CC000000"/>
+            <SolidColorBrush x:Key="OverlayTextBrush"           Color="#CCFFFFFF"/>
+            <SolidColorBrush x:Key="CropGuidePrimaryBrush"      Color="#A82C32"/>
+            <SolidColorBrush x:Key="CropGuidePrimaryFillBrush"  Color="#30A82C32"/>
+            <SolidColorBrush x:Key="CropGuideSecondaryBrush"    Color="#9333EA"/>
+            <SolidColorBrush x:Key="CropGuideHotBrush"          Color="#FF0000"/>
+            <SolidColorBrush x:Key="CropGuideHotSoftBrush"      Color="#CC1A1A"/>
+            <SolidColorBrush x:Key="SentimentSelectionBrush"    Color="#220099CC"/>
+            <SolidColorBrush x:Key="SentimentTooltipBrush"      Color="#DDFFFFFF"/>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █              SECTION 2  ·  TYPOGRAPHY / FONT SIZES                   █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            How to use these:
+              • If you know the size you want    → use the SCALE token (FontMd)
+              • If you want a name to mean a job → use the SEMANTIC token
+                                                   (BodyFontSize, PageTitleFontSize)
+
+            Prefer SEMANTIC tokens — when you want every page title bigger, you
+            change PageTitleFontSize once instead of editing 10 views.
+            -->
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 2A · RAW SIZE SCALE  (use when picking a specific point size)
+                 ───────────────────────────────────────────────────────────────
+                 FontXxs (10) ▸ tiny badges, decorative micro-text
+                 FontXs  (11) ▸ field labels, side-bar section headers
+                 FontSm  (12) ▸ captions, breadcrumbs, helper text
+                 FontMd  (13) ▸ default UI text size — buttons, list rows
+                 FontLg  (14) ▸ slightly larger body, inventory card titles
+                 FontXl  (15) ▸ section headings inside a card
+                 Font2xl (16) ▸ emphasized inline text, dialog headings
+                 Font3xl (18) ▸ small page titles
+                 Font4xl (22) ▸ medium hero numbers
+                 Font5xl (28) ▸ page titles ("Inventory", "Stock tracker")
+                 Font6xl (32) ▸ hero stats on the Home dashboard
+            -->
+            <sys:Double x:Key="FontXxs">10</sys:Double>
+            <sys:Double x:Key="FontXs">11</sys:Double>
+            <sys:Double x:Key="FontSm">12</sys:Double>
+            <sys:Double x:Key="FontMd">13</sys:Double>
+            <sys:Double x:Key="FontLg">14</sys:Double>
+            <sys:Double x:Key="FontXl">15</sys:Double>
+            <sys:Double x:Key="Font2xl">16</sys:Double>
+            <sys:Double x:Key="Font3xl">18</sys:Double>
+            <sys:Double x:Key="Font4xl">22</sys:Double>
+            <sys:Double x:Key="Font5xl">28</sys:Double>
+            <sys:Double x:Key="Font6xl">32</sys:Double>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 2B · SEMANTIC FONT ROLES  (preferred — change one, ripple out)
+                 ───────────────────────────────────────────────────────────────
+                 BodyFontSize         ▸ Default UI text. Affects: PrimaryButton,
+                                        SecondaryButton, SearchTextBox, page
+                                        subtitles, the Home running-low row
+                                        labels.
+                 LabelFontSize        ▸ Tiny uppercase labels. Affects: sidebar
+                                        section headers (OVERVIEW / STASH /
+                                        MAKE / REPORTS) and Home stat-card
+                                        labels (TOTAL ITEMS, LOW / OUT, etc.).
+                 CaptionFontSize      ▸ Affects: every page breadcrumb
+                                        ("My Crafty Stash  /  Inventory") and
+                                        small hint text.
+                 SectionTitleFontSize ▸ Headings inside a card or panel
+                                        (e.g. "Running low", "Recent projects"
+                                        on the Home page).
+                 PageTitleFontSize    ▸ The big bold title at the top of every
+                                        view ("Inventory", "Project gallery",
+                                        "Welcome Josh & Heather").
+                 StatValueFontSize    ▸ The huge numbers on the Home dashboard
+                                        stat cards (22, 23, 3, 6).
+            -->
+            <sys:Double x:Key="BodyFontSize">13</sys:Double>
+            <sys:Double x:Key="LabelFontSize">11</sys:Double>
+            <sys:Double x:Key="CaptionFontSize">12</sys:Double>
+            <sys:Double x:Key="SectionTitleFontSize">15</sys:Double>
+            <sys:Double x:Key="PageTitleFontSize">28</sys:Double>
+            <sys:Double x:Key="StatValueFontSize">32</sys:Double>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █              SECTION 3  ·  CORNER RADII (rounding)                   █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            All values are CornerRadius type — apply with
+                CornerRadius="{StaticResource RadiusLg}"
+
+            ───────────────────────────────────────────────────────────────────
+            3A · RAW SCALE
+                RadiusXs   ( 3) ▸ tiny chips
+                RadiusSm   ( 4) ▸ small badges, type pills on inventory cards
+                RadiusMd   ( 6) ▸ small dropdowns, narrow buttons
+                RadiusLg   ( 8) ▸ inputs, default buttons (legacy default)
+                RadiusXl   (10) ▸ NEW button + input default — primary buttons
+                Radius2xl  (12) ▸ NEW card default — inventory cards, brand card
+                Radius3xl  (14) ▸ NEW panel default — Home dashboard panels
+
+            3B · SEMANTIC ALIASES
+                RadiusCard  (12) ▸ what an inventory card / brand card uses.
+                RadiusPanel (14) ▸ what a Home dashboard panel uses.
+                RadiusPill (999) ▸ fully rounded pill — used for the "Low" /
+                                   "Out" / "In stock" status pills, the back
+                                   button in the wizard, and progress bar
+                                   tracks.
+            -->
+            <CornerRadius x:Key="RadiusXs">3</CornerRadius>
+            <CornerRadius x:Key="RadiusSm">4</CornerRadius>
+            <CornerRadius x:Key="RadiusMd">6</CornerRadius>
+            <CornerRadius x:Key="RadiusLg">8</CornerRadius>
+            <CornerRadius x:Key="RadiusXl">10</CornerRadius>
+            <CornerRadius x:Key="Radius2xl">12</CornerRadius>
+            <CornerRadius x:Key="Radius3xl">14</CornerRadius>
+            <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+            <CornerRadius x:Key="RadiusPanel">14</CornerRadius>
+            <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █              SECTION 4  ·  SPACING + DIMENSIONS                      █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            Apply via FontSize-style dynamic resource bindings. Most spacing
+            is still inline in views — these tokens give you a head start when
+            doing future tweaks.
+            -->
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 4A · GENERIC SPACING SCALE
+                 ───────────────────────────────────────────────────────────────
+                 SpaceXs  ( 4) ▸ smallest gap between two adjacent things
+                 SpaceSm  ( 8) ▸ default small gap (icon ↔ text in a button)
+                 SpaceMd  (12) ▸ medium gap, vertical row spacing
+                 SpaceLg  (16) ▸ default panel padding
+                 SpaceXl  (24) ▸ large gap between section blocks
+                 Space2xl (32) ▸ extra-large gap, page outer gutter
+            -->
+            <sys:Double x:Key="SpaceXs">4</sys:Double>
+            <sys:Double x:Key="SpaceSm">8</sys:Double>
+            <sys:Double x:Key="SpaceMd">12</sys:Double>
+            <sys:Double x:Key="SpaceLg">16</sys:Double>
+            <sys:Double x:Key="SpaceXl">24</sys:Double>
+            <sys:Double x:Key="Space2xl">32</sys:Double>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 4B · PAGE LAYOUT
+                 ───────────────────────────────────────────────────────────────
+                 PageGutter       ▸ The 32px left/right padding inside every
+                                    main view (Inventory header, Stock header,
+                                    Home dashboard, etc.).
+                 PageHeaderTop    ▸ Top padding of a page header strip (above
+                                    the breadcrumb).
+                 PageHeaderBottom ▸ Bottom padding of a page header strip
+                                    (below the subtitle).
+            -->
+            <sys:Double x:Key="PageGutter">32</sys:Double>
+            <sys:Double x:Key="PageHeaderTop">22</sys:Double>
+            <sys:Double x:Key="PageHeaderBottom">14</sys:Double>
+
+            <!-- ───────────────────────────────────────────────────────────────
+                 4C · WINDOW CHROME DIMENSIONS
+                 ───────────────────────────────────────────────────────────────
+                 SidebarWidth   ▸ Width of the cream sidebar column. NOTE:
+                                  the literal "248" in MainWindow.xaml's
+                                  ColumnDefinition must match this — keep both
+                                  values in sync if you change one.
+                 TitleBarHeight ▸ Height of the dark brand bar at the very top.
+                 InputHeight    ▸ MinHeight of search boxes / dropdowns / dates.
+                 ButtonHeight   ▸ Reference height for primary/secondary
+                                  buttons (used for sizing decisions).
+            -->
+            <sys:Double x:Key="SidebarWidth">248</sys:Double>
+            <sys:Double x:Key="TitleBarHeight">40</sys:Double>
+            <sys:Double x:Key="InputHeight">44</sys:Double>
+            <sys:Double x:Key="ButtonHeight">40</sys:Double>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █              SECTION 5  ·  BRAND STRINGS                             █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            One source of truth for the app name and subtitle. Reference these
+            with {StaticResource AppName} (StaticResource — strings don't need
+            DynamicResource since they don't change at runtime).
+            -->
+
+            <!-- AppName       ▸ Full product name. Affects: title bar, every
+                                 page breadcrumb's first segment, the brand
+                                 card under the title bar.
+                 AppShortName  ▸ Short form (currently "Stash"). Reserved for
+                                 places where the full name is too long
+                                 (window title etc.).
+                 OrgSubtitle   ▸ The tagline shown next to the title bar logo
+                                 (rendered as "— {value}").
+                 StashLabel    ▸ The small line under the brand card in the
+                                 sidebar ("My Stash · local file").
+            -->
+            <sys:String x:Key="AppName">My Crafty Stash</sys:String>
+            <sys:String x:Key="AppShortName">Stash</sys:String>
+            <sys:String x:Key="OrgSubtitle">Your File · Your Craft Room</sys:String>
+            <sys:String x:Key="StashLabel">My Stash · local file</sys:String>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █          SECTION 6  ·  INVENTORY CARD GRID  (legacy keys)            █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+
+            These are tied to the per-user "Card Size" + "Text Size" settings
+            in the Settings dialog. They're rewritten at runtime by
+                Services/UserSettingsService.cs  →  ApplyCardSize/ApplyTextSize
+            so editing them here only affects the default before a user picks
+            a size. Each one drives a specific piece of the inventory card:
+
+                CardItemWidth       ▸ Outer width of each inventory card tile.
+                CardItemHeight      ▸ Outer height of each inventory card tile.
+                CardBorderWidth     ▸ Inner border of the card (the colored
+                                      gradient block).
+                CardImageHeight     ▸ Height reserved for the card thumbnail.
+                CardNameFontSize    ▸ Item name on each card.
+                CardTypeFontSize    ▸ The small type/subtype line.
+                CardBadgeFontSize   ▸ The "STAMP" / "DIE" / "PAPER" pill text.
+                ListFontSize        ▸ Default size of list-row text in
+                                      Inventory's list view.
+                DetailTitleFontSize ▸ Item-detail page title.
+                DetailLabelFontSize ▸ "Type:" / "Theme:" label text on detail.
+                DetailValueFontSize ▸ The actual values on the detail page.
+            -->
+            <sys:Double x:Key="CardItemWidth">236</sys:Double>
+            <sys:Double x:Key="CardItemHeight">320</sys:Double>
+            <sys:Double x:Key="CardBorderWidth">220</sys:Double>
+            <sys:Double x:Key="CardImageHeight">140</sys:Double>
+            <sys:Double x:Key="CardNameFontSize">14</sys:Double>
+            <sys:Double x:Key="CardTypeFontSize">12</sys:Double>
+            <sys:Double x:Key="CardBadgeFontSize">10</sys:Double>
+            <sys:Double x:Key="ListFontSize">14</sys:Double>
+            <sys:Double x:Key="DetailTitleFontSize">24</sys:Double>
+            <sys:Double x:Key="DetailLabelFontSize">12</sys:Double>
+            <sys:Double x:Key="DetailValueFontSize">14</sys:Double>
+
+            <!--
+            ████████████████████████████████████████████████████████████████████████
+            █                                                                      █
+            █              END OF DESIGN TOKENS · STYLES BELOW                     █
+            █                                                                      █
+            ████████████████████████████████████████████████████████████████████████
+            Below are reusable Style definitions (CardStyle, PrimaryButton,
+            SecondaryButton, SearchTextBox, Pill, etc.). These styles consume
+            the tokens above — edit a token, every style that uses it updates.
+            You can also override an individual element inline if you need a
+            one-off. Try to add to the styles instead of inlining new colors.
+            -->
+
+            
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="12"/>
+                <Setter Property="Padding" Value="16"/>
+            </Style>
+
+            <!-- Crafty Stash style: panel/section card -->
+            <Style x:Key="PanelCard" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="14"/>
+                <Setter Property="Padding" Value="20"/>
+            </Style>
+
+            <!-- Sidebar section header -->
+            <Style x:Key="SidebarSectionHeader" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource LabelFontSize}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Margin" Value="14,18,8,6"/>
+                <Setter Property="Opacity" Value="0.85"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            </Style>
+
+            <!-- View header title (page title) -->
+            <Style x:Key="PageTitle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource PageTitleFontSize}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </Style>
+            <Style x:Key="PageSubtitle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+                <Setter Property="Margin" Value="0,4,0,0"/>
+            </Style>
+            <Style x:Key="Breadcrumb" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
+            </Style>
+
+            <!-- Stat number / label -->
+            <Style x:Key="StatLabel" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource LabelFontSize}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+            <Style x:Key="StatValue" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource StatValueFontSize}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Margin" Value="0,6,0,0"/>
+            </Style>
+            <Style x:Key="StatHint" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource LabelFontSize}"/>
+                <Setter Property="Margin" Value="0,8,0,0"/>
+            </Style>
+
+            <!-- Chip-style toggle: pill outline that fills with PrimaryBrush when checked.
+                 Use for multi-select chip strips (e.g. subtype filters on Add/Edit Item). -->
+            <Style x:Key="ChipToggle" TargetType="ToggleButton">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Padding" Value="12,5"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Margin" Value="0,0,6,6"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="ChipBd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{DynamicResource PrimaryBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="14"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ChipBd" Property="Background" Value="{DynamicResource SidebarBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="ChipBd" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Selected-chip pill for the compact picker pattern: solid primary
+                 background with an inline × remove button. Used on the Add/Edit Item
+                 forms to show selected subtypes/themes inline; the actual popup
+                 still uses ChipToggle for multi-select. -->
+            <Style x:Key="SelectedChipPill" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="CornerRadius" Value="14"/>
+                <Setter Property="Padding" Value="10,4"/>
+                <Setter Property="Margin" Value="0,0,4,4"/>
+            </Style>
+
+            <!-- Pill / badge -->
+            <Style x:Key="Pill" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource BadgeBrush}"/>
+                <Setter Property="CornerRadius" Value="999"/>
+                <Setter Property="Padding" Value="10,3"/>
+            </Style>
+            <Style x:Key="PillDanger" TargetType="Border" BasedOn="{StaticResource Pill}">
+                <Setter Property="Background" Value="{DynamicResource PrimarySoftBrush}"/>
+            </Style>
+            
+            <Style x:Key="PrimaryButton" TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="18,10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="10"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="White"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <Style x:Key="SecondaryButton" TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="18,10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="10"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <!-- ToggleButton sized + styled to sit cleanly in a row of SecondaryButtons.
+                 Same border/padding/font/corner-radius as SecondaryButton; flips to the
+                 PrimaryBrush filled look when checked. Use this instead of ChipToggle
+                 when the toggle needs to align visually with regular 50px-tall buttons. -->
+            <Style x:Key="SecondaryToggleButton" TargetType="ToggleButton">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="18,10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="10"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="DangerButton" TargetType="Button">
+                <Setter Property="Background" Value="#EF4444"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="20,10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    CornerRadius="8" 
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#DC2626"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <Style x:Key="NavButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="16,12"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                    CornerRadius="8" 
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <Style TargetType="ComboBox">
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="MinHeight" Value="34"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <Border x:Name="border"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="4"/>
+                                <!-- Arrow toggle button -->
+                                <ToggleButton x:Name="toggleButton"
+                                              IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                              ClickMode="Press"
+                                              Background="Transparent"
+                                              BorderThickness="0"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"
+                                              Focusable="False"/>
+                                <!-- Selected content (non-editable mode) -->
+                                <ContentPresenter x:Name="contentPresenter"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center"
+                                                  IsHitTestVisible="False"/>
+                                <!-- Editable text box (IsEditable=True mode) -->
+                                <TextBox x:Name="PART_EditableTextBox"
+                                         Background="Transparent"
+                                         Foreground="{TemplateBinding Foreground}"
+                                         FontSize="{TemplateBinding FontSize}"
+                                         Margin="{TemplateBinding Padding}"
+                                         Padding="0"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
+                                         IsReadOnly="{TemplateBinding IsReadOnly}"
+                                         BorderThickness="0"
+                                         Visibility="Collapsed"/>
+                                <!-- Arrow icon -->
+                                <Path x:Name="arrow"
+                                      Data="M 0 0 L 4 4 L 8 0 Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,10,0"
+                                      IsHitTestVisible="False"/>
+                                <!-- Popup -->
+                                <Popup x:Name="PART_Popup"
+                                       IsOpen="{TemplateBinding IsDropDownOpen}"
+                                       Placement="Bottom"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       PopupAnimation="Slide">
+                                    <Border x:Name="dropDownBorder"
+                                            Background="{DynamicResource InputBackgroundBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            MinWidth="{TemplateBinding ActualWidth}"
+                                            MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                        <ScrollViewer>
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsEditable" Value="True">
+                                    <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="contentPresenter" Property="Visibility" Value="Collapsed"/>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsDropDownOpen" Value="True">
+                                    <Setter TargetName="arrow" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="180" CenterX="4" CenterY="2"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="Padding" Value="10,6"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBoxItem">
+                            <Border x:Name="itemBorder"
+                                    Background="{TemplateBinding Background}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <Style TargetType="DatePicker">
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Padding" Value="12,10"/>
+            </Style>
+            
+            <Style TargetType="Calendar">
+                <Setter Property="LayoutTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1.75" ScaleY="1.75"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <Style x:Key="SearchTextBox" TargetType="TextBox">
+                <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="14,10"/>
+                <Setter Property="MinHeight" Value="{StaticResource InputHeight}"/>
+                <Setter Property="FontSize" Value="{StaticResource BodyFontSize}"/>
+                <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="SelectionBrush" Value="{DynamicResource PrimaryLightBrush}"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="10"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Focusable="False"
+                                              Padding="{TemplateBinding Padding}"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Hidden"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

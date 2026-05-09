@@ -1,0 +1,446 @@
+<UserControl x:Class="MyCraftyStash.Views.StockTrackingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:views="clr-namespace:MyCraftyStash.Views"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" Padding="32,22,32,14">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="Stock tracker"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource PageTitle}" Text="Stock tracker" Margin="0,4,0,0"/>
+                <TextBlock Style="{StaticResource PageSubtitle}"
+                           Text="Track supplies and finished project cards — keep your essentials topped up."/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab bar -->
+        <Border Grid.Row="1" Background="Transparent"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Margin="32,0">
+                <Border Padding="16,12" Cursor="Hand" Margin="0,0,4,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveStockTab}" Value="Supply">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding ShowSupplyTabCommand}"/>
+                    </Border.InputBindings>
+                    <TextBlock Text="Supply Stock" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActiveStockTab}" Value="Supply">
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+                <Border Padding="16,12" Cursor="Hand">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveStockTab}" Value="Projects">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding ShowProjectsTabCommand}"/>
+                    </Border.InputBindings>
+                    <TextBlock Text="Project Inventory" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActiveStockTab}" Value="Projects">
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab content -->
+        <Grid Grid.Row="2">
+
+            <!-- SUPPLY STOCK TAB -->
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActiveStockTab}" Value="Supply">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="Transparent" Padding="32,4,32,12">
+                    <TextBox Style="{StaticResource SearchTextBox}"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Search by name, type, or subtype..."
+                             Width="420" HorizontalAlignment="Left"/>
+                </Border>
+                <StackPanel Grid.Row="1" Margin="32,0">
+                    <Border Background="{DynamicResource PrimarySoftBrush}" Padding="16,8" CornerRadius="8" Margin="0,0,0,8"
+                            Visibility="{Binding SuccessMessage, Converter={StaticResource NullToVisConverter}}">
+                        <TextBlock Text="{Binding SuccessMessage}" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/>
+                    </Border>
+                    <Border Background="{DynamicResource PrimarySoftBrush}" Padding="16,8" CornerRadius="8" Margin="0,0,0,8"
+                            Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisConverter}}">
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="32,0,32,24">
+                    <StackPanel>
+                        <TextBlock Text="No tracked items found. Add cardstock, envelopes, foil-its or foils to your inventory and set a pack size."
+                                   Foreground="{DynamicResource TextMutedBrush}" FontSize="15"
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                   Margin="0,48,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StockGroups.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="Loading..." Foreground="{DynamicResource TextMutedBrush}"
+                                   HorizontalAlignment="Center" Margin="0,48,0,0"
+                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"/>
+                        <ItemsControl ItemsSource="{Binding StockGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource CardBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="10" Margin="0,0,0,20">
+                                        <StackPanel>
+                                            <Border Background="{DynamicResource SidebarBrush}" CornerRadius="10,10,0,0" Padding="20,14">
+                                                <Grid>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding TypeName}" FontSize="16" FontWeight="Bold"
+                                                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                                        <Border Background="{DynamicResource PrimaryLightBrush}" CornerRadius="12" Padding="10,3" Margin="12,0,0,0">
+                                                            <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="White">
+                                                                <Run Text="{Binding Items.Count, Mode=OneWay}"/>
+                                                                <Run Text=" items"/>
+                                                            </TextBlock>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                        <TextBlock Text="Total: " Foreground="{DynamicResource TextMutedBrush}" FontSize="13" VerticalAlignment="Center"/>
+                                                        <TextBlock FontSize="15" FontWeight="Bold" VerticalAlignment="Center">
+                                                            <Run Text="{Binding TotalUnits, Mode=OneWay}"/>
+                                                            <Run Text=" "/>
+                                                            <Run Text="{Binding UnitLabel, Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Padding="20,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
+                                                                               Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                                                               MouseLeftButtonUp="ItemName_Click" Tag="{Binding}"/>
+                                                                    <TextBlock Text="{Binding Subtype}" FontSize="12"
+                                                                               Foreground="{DynamicResource PrimaryBrush}" Margin="0,2,0,0">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Subtype}" Value="{x:Null}">
+                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding Subtype}" Value="">
+                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding PackSize}" Value="{x:Null}">
+                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                        <Run Text="{Binding PackSize, Mode=OneWay}"/>
+                                                                        <Run Text=" per pack"/>
+                                                                    </TextBlock>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                                    <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                                            <Border CornerRadius="20" Padding="16,6" Margin="0,0,10,0">
+                                                                                <Border.Style>
+                                                                                    <Style TargetType="Border">
+                                                                                        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}"/>
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding CurrentStock}" Value="0">
+                                                                                                <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </Border.Style>
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <TextBlock FontSize="18" FontWeight="Bold">
+                                                                                        <TextBlock.Style>
+                                                                                            <Style TargetType="TextBlock">
+                                                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                                <Style.Triggers>
+                                                                                                    <DataTrigger Binding="{Binding CurrentStock}" Value="0">
+                                                                                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                                                                    </DataTrigger>
+                                                                                                </Style.Triggers>
+                                                                                            </Style>
+                                                                                        </TextBlock.Style>
+                                                                                        <Run Text="{Binding CurrentStock, Mode=OneWay}"/>
+                                                                                    </TextBlock>
+                                                                                    <TextBlock Text=" " FontSize="18"/>
+                                                                                    <TextBlock Text="{Binding UnitLabel}" FontSize="13"
+                                                                                               VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                            <Button Style="{StaticResource SecondaryButton}" Content="Edit" Padding="10,4"
+                                                                                    Tag="{Binding}" Click="EditStock_Click"/>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                    <StackPanel Orientation="Horizontal"
+                                                                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}}">
+                                                                        <TextBox Width="80" Style="{StaticResource SearchTextBox}"
+                                                                                 Text="{Binding EditValue, UpdateSourceTrigger=PropertyChanged}"
+                                                                                 Tag="{Binding}" KeyDown="StockTextBox_KeyDown"/>
+                                                                        <TextBlock Text="{Binding UnitLabel}" VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource TextMutedBrush}" Margin="6,0,10,0" FontSize="13"/>
+                                                                        <Button Style="{StaticResource PrimaryButton}" Content="Save" Padding="10,4" Margin="0,0,6,0"
+                                                                                Tag="{Binding}" Click="SaveStock_Click"/>
+                                                                        <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Padding="10,4"
+                                                                                Tag="{Binding}" Click="CancelStock_Click"/>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- PROJECT INVENTORY TAB -->
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActiveStockTab}" Value="Projects">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="Transparent" Padding="32,4,32,12">
+                    <TextBox Style="{StaticResource SearchTextBox}"
+                             Text="{Binding ProjectSearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Search projects..."
+                             Width="420" HorizontalAlignment="Left"/>
+                </Border>
+                <StackPanel Grid.Row="1">
+                    <Border Background="{DynamicResource SuccessSoftBrush}" Padding="16,8"
+                            Visibility="{Binding SuccessMessage, Converter={StaticResource NullToVisConverter}}">
+                        <TextBlock Text="{Binding SuccessMessage}" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/>
+                    </Border>
+                    <Border Background="{DynamicResource DangerSoftBrush}" Padding="16,8"
+                            Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisConverter}}">
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource DangerBrush}" FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="24">
+                    <StackPanel>
+                        <!-- Empty state -->
+                        <StackPanel HorizontalAlignment="Center" Margin="0,48,0,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ProjectRows.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="No tracked projects yet."
+                                       Foreground="{DynamicResource TextMutedBrush}" FontSize="15"
+                                       TextWrapping="Wrap" TextAlignment="Center"/>
+                            <TextBlock Text="Go to Settings &gt; Project Tracked Items to choose which projects to track here."
+                                       Foreground="{DynamicResource TextMutedBrush}" FontSize="13"
+                                       TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+
+                        <!-- Project rows card -->
+                        <Border Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ProjectRows.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <Border Background="{DynamicResource SidebarBrush}" CornerRadius="10,10,0,0" Padding="20,14">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Projects" FontSize="16" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                        <Border Background="{DynamicResource PrimaryLightBrush}" CornerRadius="12" Padding="10,3" Margin="12,0,0,0">
+                                            <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="White">
+                                                <Run Text="{Binding ProjectRows.Count, Mode=OneWay}"/>
+                                                <Run Text=" tracked"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding ProjectRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="20,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding ProjectName}"
+                                                               FontWeight="SemiBold" FontSize="14"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                        <!-- Display mode -->
+                                                        <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                                <Border CornerRadius="20" Padding="16,6" Margin="0,0,10,0">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding QuantityOnHand}" Value="0">
+                                                                                    <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock FontSize="18" FontWeight="Bold">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding QuantityOnHand}" Value="0">
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                            <Run Text="{Binding QuantityOnHand, Mode=OneWay}"/>
+                                                                        </TextBlock>
+                                                                        <TextBlock Text=" on hand" FontSize="13"
+                                                                                   VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                                <Button Style="{StaticResource SecondaryButton}" Content="Edit" Padding="10,4"
+                                                                        Tag="{Binding}" Click="EditProjectStock_Click"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                        <!-- Edit mode -->
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}}">
+                                                            <TextBox Width="80" Style="{StaticResource SearchTextBox}"
+                                                                     Text="{Binding EditValue, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Tag="{Binding}" KeyDown="ProjectStockTextBox_KeyDown"/>
+                                                            <TextBlock Text="on hand" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextMutedBrush}" Margin="6,0,10,0" FontSize="13"/>
+                                                            <Button Style="{StaticResource PrimaryButton}" Content="Save" Padding="10,4" Margin="0,0,6,0"
+                                                                    Tag="{Binding}" Click="SaveProjectStock_Click"/>
+                                                            <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Padding="10,4"
+                                                                    Tag="{Binding}" Click="CancelProjectStock_Click"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,243 @@
+<Window x:Class="MyCraftyStash.Views.TeWishlistImportDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import from Taylored Expressions Wishlist"
+        Height="660" Width="700"
+        MinHeight="520" MinWidth="560"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,16">
+            <StackPanel>
+                <TextBlock Text="Import from TE Wishlist" FontSize="17" FontWeight="Bold"
+                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="Paste a public wishlist URL from tayloredexpressions.com to import items."
+                           FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- URL input -->
+        <Border Grid.Row="1" Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="UrlBox" Grid.Column="0"
+                         Style="{StaticResource SearchTextBox}"
+                         Text="{Binding WishlistUrl, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="10,9" FontSize="13"
+                         KeyDown="UrlBox_KeyDown"/>
+                <Button x:Name="FetchButton" Grid.Column="2"
+                        Content="Load Wishlist" Padding="18,9"
+                        Style="{StaticResource PrimaryButton}"
+                        Click="FetchButton_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Results area -->
+        <Grid Grid.Row="2">
+
+            <!-- Initial prompt -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding ShowPrompt, Converter={StaticResource BoolToVisConverter}}">
+                <TextBlock Text="🔗" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <TextBlock Text="Paste a wishlist URL above and click Load."
+                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Example: tayloredexpressions.com/wishlist.php?publicwishlist=..."
+                           FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            </StackPanel>
+
+            <!-- Loading -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+                <TextBlock Text="Loading wishlist..." FontSize="14"
+                           Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Error -->
+            <Border Margin="24" VerticalAlignment="Center" CornerRadius="8" Padding="16"
+                    Background="{DynamicResource DangerSoftBrush}" BorderBrush="{DynamicResource DangerSoftBrush}" BorderThickness="1"
+                    Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Could not load wishlist" FontWeight="Bold" FontSize="14"
+                               Foreground="{DynamicResource DangerBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="12" Foreground="{DynamicResource DangerBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Items list -->
+            <Grid Visibility="{Binding HasItems, Converter={StaticResource BoolToVisConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Select all bar -->
+                <Border Grid.Row="0" Background="{DynamicResource SidebarBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                        Padding="16,10">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Left" Content="Select all"
+                                  IsChecked="{Binding AllSelected}"
+                                  VerticalAlignment="Center" FontSize="13"
+                                  Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock HorizontalAlignment="Right" DockPanel.Dock="Right"
+                                   VerticalAlignment="Center" FontSize="12"
+                                   Foreground="{DynamicResource TextMutedBrush}">
+                            <Run Text="{Binding SelectedCount, Mode=OneWay}"/>
+                            <Run Text=" of "/>
+                            <Run Text="{Binding Items.Count, Mode=OneWay}"/>
+                            <Run Text=" selected"/>
+                        </TextBlock>
+                    </DockPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Items}" Margin="0,4,0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="16,10"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Selected}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource SidebarBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="52"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding Selected}"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                                        <Border Grid.Column="1" Width="44" Height="44" CornerRadius="4"
+                                                Background="{DynamicResource BorderBrush}"
+                                                ClipToBounds="True" VerticalAlignment="Center">
+                                            <Grid>
+                                                <TextBlock Text="📦" FontSize="20"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Visibility="{Binding ImageUrl, Converter={StaticResource InverseNullToVisConverter}}"/>
+                                                <Image Stretch="UniformToFill" VerticalAlignment="Center"
+                                                       Source="{Binding ImageUrl}"
+                                                       Visibility="{Binding ImageUrl, Converter={StaticResource NullToVisConverter}}"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,8,0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       FontSize="13" Foreground="{DynamicResource TextBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,3,0,0">
+                                                <Run Text="{Binding Type, TargetNullValue=''}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Column="3" VerticalAlignment="Center"
+                                                   Text="{Binding Price, StringFormat='${0:F2}', TargetNullValue=''}"
+                                                   FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource PrimaryBrush}"
+                                                   HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="3" Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+                Padding="20,12">
+            <StackPanel>
+                <!-- Wishlist destination picker (only shown when items are loaded) -->
+                <Border Visibility="{Binding HasItems, Converter={StaticResource BoolToVisConverter}}"
+                        Margin="0,0,0,12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                        Padding="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Save to list:"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="2">
+                            <ComboBox x:Name="WishlistCombo"
+                                      ItemsSource="{Binding WishlistOptions}"
+                                      SelectedItem="{Binding SelectedWishlistOption}"
+                                      DisplayMemberPath="Name"
+                                      Padding="10,7"
+                                      SelectionChanged="WishlistCombo_SelectionChanged"/>
+                            <!-- New list name input - shown when "Create new..." is selected -->
+                            <Grid Visibility="{Binding ShowNewListInput, Converter={StaticResource BoolToVisConverter}}"
+                                  Margin="0,8,0,0">
+                                <TextBox x:Name="NewListNameBox"
+                                         Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewListName, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="10,8" FontSize="13"
+                                         Background="Transparent"/>
+                                <TextBlock Text="Enter new list name..." Margin="12,9,0,0"
+                                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                                           IsHitTestVisible="False">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding NewListName}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Buttons row -->
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                        <Button Content="Cancel" Style="{StaticResource SecondaryButton}"
+                                Padding="18,8" Margin="0,0,10,0" Click="Cancel_Click"/>
+                        <Button x:Name="ImportButton" Content="Import Selected"
+                                Style="{StaticResource PrimaryButton}" Padding="18,8"
+                                IsEnabled="{Binding CanImport}"
+                                Click="Import_Click"/>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

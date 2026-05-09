@@ -1,0 +1,2210 @@
+<UserControl x:Class="MyCraftyStash.Views.InventoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:controls="clr-namespace:MyCraftyStash.Controls"
+             xmlns:converters="clr-namespace:MyCraftyStash.Converters"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <UserControl.Resources>
+        <!-- Required-field validation badge: red circle with a "!" shown next to a
+             field that failed Save validation. Binding/Visibility/ToolTip are set
+             on each instance so this style only owns the appearance. -->
+        <Style x:Key="ValidationBadge" TargetType="Border">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="CornerRadius" Value="11"/>
+            <Setter Property="Background" Value="#FFD9534F"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+        </Style>
+        <Style x:Key="ValidationBadgeText" TargetType="TextBlock">
+            <Setter Property="Text" Value="!"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" Padding="32,22,32,14">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="Inventory"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource PageTitle}" Text="Inventory" Margin="0,4,0,0"/>
+                <TextBlock Style="{StaticResource PageSubtitle}"
+                           Text="Manage your craft supplies — search, sort, and add new items."/>
+            </StackPanel>
+        </Border>
+        
+        <Grid Grid.Row="1">
+            <Grid Visibility="{Binding IsAddingItem, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                <Grid Visibility="{Binding IsViewingDetails, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" Background="Transparent" Padding="32,4,32,16">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         VerticalAlignment="Center"
+                                         KeyDown="SearchTextBox_KeyDown"/>
+                                <ComboBox Grid.Column="2"
+                                          ItemsSource="{Binding ItemTypes}"
+                                          SelectedItem="{Binding SelectedType}"
+                                          VerticalContentAlignment="Center"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                </ComboBox>
+                                <Button Grid.Column="4"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Content="Search"
+                                        Command="{Binding SearchCommand}"
+                                        VerticalAlignment="Center"/>
+                                <Button Grid.Column="6"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="Clear"
+                                        Command="{Binding ClearFiltersCommand}"
+                                        VerticalAlignment="Center"/>
+                                <!-- Find items missing photos: toggles NoPictureOnly. -->
+                                <ToggleButton Grid.Column="8"
+                                              Style="{StaticResource SecondaryToggleButton}"
+                                              IsChecked="{Binding NoPictureOnly}"
+                                              Content="No image"
+                                              VerticalAlignment="Center"/>
+                                <!-- + Add Item: jump straight into the add form. -->
+                                <Button Grid.Column="10"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Content="+ Add Item"
+                                        Command="{Binding DataContext.NavigateToAddItemCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                        VerticalAlignment="Center"/>
+                                <!-- Search mode toggles -->
+                                <StackPanel Grid.Column="12" Orientation="Vertical" VerticalAlignment="Center">
+                                    <CheckBox Content="Name only"
+                                              IsChecked="{Binding SearchByName}"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="12"
+                                              Margin="0,0,0,4"
+                                              Cursor="Hand"/>
+                                    <CheckBox Content="Theme only"
+                                              IsChecked="{Binding SearchByTheme}"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="12"
+                                              Margin="0,0,0,4"
+                                              Cursor="Hand"/>
+                                    <CheckBox Content="Discontinued only"
+                                              IsChecked="{Binding DiscontinuedOnly}"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="12"
+                                              Cursor="Hand"/>
+                                </StackPanel>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SearchSubtypeFilters}"
+                                          Visibility="{Binding HasSearchSubtypeFilters, Converter={StaticResource BoolToVisConverter}}"
+                                          Margin="0,10,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsChecked}"
+                                                  Content="{Binding Label}"
+                                                  Foreground="{DynamicResource TextBrush}"
+                                                  Margin="0,0,16,0"
+                                                  Cursor="Hand"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ListBox x:Name="InventoryListBox" Grid.Row="1" 
+                             ItemsSource="{Binding Items}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="24"
+                             SelectedItem="{x:Null}"
+                             SelectionMode="Single"
+                             IsTabStop="False">
+                        <ListBox.Resources>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.Resources>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controls:VirtualizingWrapPanel ItemWidth="{DynamicResource CardItemWidth}" ItemHeight="{DynamicResource CardItemHeight}" BufferRows="3"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardStyle}" 
+                                        Width="{DynamicResource CardBorderWidth}" 
+                                        Margin="0,0,16,16" 
+                                        Cursor="Hand"
+                                        MouseLeftButtonUp="ItemCard_Click">
+                                    <StackPanel>
+                                        <Grid Height="{DynamicResource CardImageHeight}" Margin="0,0,0,12">
+                                            <Border CornerRadius="8" Background="{DynamicResource SidebarBrush}" ClipToBounds="True">
+                                                <Image Stretch="Uniform" 
+                                                       HorizontalAlignment="Center" 
+                                                       VerticalAlignment="Center">
+                                                    <Image.Source>
+                                                        <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                            <Binding Path="Id"/>
+                                                            <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                        </MultiBinding>
+                                                    </Image.Source>
+                                                </Image>
+                                            </Border>
+                                            <Border Background="{DynamicResource BadgeBrush}" CornerRadius="4" Padding="6,2" 
+                                                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,8,0,0">
+                                                <TextBlock Foreground="{DynamicResource TextBrush}" 
+                                                           FontSize="{DynamicResource CardBadgeFontSize}" 
+                                                           FontWeight="SemiBold">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource TypeWithSubtypeConverter}">
+                                                            <Binding Path="Type"/>
+                                                            <Binding Path="Subtype"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </Border>
+                                            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8,0,0,8" Orientation="Horizontal">
+                                                <Border Background="{DynamicResource PrimaryLightBrush}" CornerRadius="4" Padding="6,2"
+                                                        Visibility="{Binding StencilLayers, Converter={StaticResource NullToVisConverter}}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Type, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}" Value="Collapsed">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Foreground="White" FontSize="{DynamicResource CardBadgeFontSize}" FontWeight="SemiBold">
+                                                        <Run Text="{Binding StencilLayers, Mode=OneWay}"/>
+                                                        <Run Text=" layers"/>
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
+                                            <!-- Bottom badges row: Discontinued (left) only -->
+                                            <Grid VerticalAlignment="Bottom" Margin="8,0,8,8">
+                                                <Border HorizontalAlignment="Left" Background="{DynamicResource DangerBrush}" CornerRadius="4" Padding="6,2"
+                                                        Visibility="{Binding IsDiscontinued, Converter={StaticResource BoolToVisConverter}}">
+                                                    <TextBlock Text="Discontinued" Foreground="White" FontSize="{DynamicResource CardBadgeFontSize}" FontWeight="SemiBold"/>
+                                                </Border>
+                                            </Grid>
+                                        </Grid>
+                                        <Grid>
+                                            <StackPanel Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="{DynamicResource CardNameFontSize}"
+                                                           Foreground="{DynamicResource TextBrush}"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Theme}" 
+                                                           Foreground="{DynamicResource PrimaryBrush}" 
+                                                           FontSize="{DynamicResource CardTypeFontSize}" 
+                                                           TextWrapping="Wrap"
+                                                           Visibility="{Binding Theme, Converter={StaticResource NullToVisConverter}}"/>
+                                            </StackPanel>
+                                            <!-- Stock badge: pinned to bottom-right corner of card -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    CornerRadius="4" Padding="6,2"
+                                                    Visibility="{Binding CurrentStock, Converter={StaticResource NullToVisConverter}}">
+                                                <Border.Background>
+                                                    <MultiBinding Converter="{StaticResource StockLevelBgConverter}" ConverterParameter="solid">
+                                                        <Binding Path="Type"/>
+                                                        <Binding Path="CurrentStock"/>
+                                                    </MultiBinding>
+                                                </Border.Background>
+                                                <TextBlock FontSize="{DynamicResource CardBadgeFontSize}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
+                                                    <Run Text="{Binding CurrentStock, Mode=OneWay}"/>
+                                                    <Run Text=" left"/>
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
+
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+                
+                <Grid Visibility="{Binding IsViewingDetails, Converter={StaticResource BoolToVisConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header bar with Back, Delete, Edit -->
+                    <Border Grid.Row="0" Background="{DynamicResource CardBrush}" Padding="16,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <DockPanel>
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Content="Back"
+                                        Command="{Binding GoBackCommand}"
+                                        Margin="0,0,8,0"/>
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Content="Back to Inventory"
+                                        Command="{Binding BackToListCommand}"
+                                        Margin="0,0,12,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <Button Style="{StaticResource PrimaryButton}"
+                                        Content="Edit Item"
+                                        Command="{Binding StartEditItemCommand}"
+                                        Margin="0,0,12,0"/>
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Content="Delete Item"
+                                        Foreground="{DynamicResource DangerBrush}"
+                                        Command="{Binding DeleteItemCommand}"
+                                        CommandParameter="{Binding SelectedItem}"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center" Margin="8,0">
+                                <TextBlock Text="{Binding SelectedItem.Name}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding SelectedItem.Type}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Main content area with sidebar -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="250" MinWidth="150" MaxWidth="550"/>
+                        </Grid.ColumnDefinitions>
+
+                        <GridSplitter Grid.Column="1"
+                                      Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                      Background="{DynamicResource BorderBrush}" Cursor="SizeWE"
+                                      ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+
+                        <!-- Left: Main content -->
+                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="24">
+                            <StackPanel Margin="24">
+                                <!-- Main card with image on top, details below -->
+                                <Border Style="{StaticResource CardStyle}">
+                                    <StackPanel>
+                                        <!-- Image area -->
+                                        <Border CornerRadius="8" Background="{DynamicResource SidebarBrush}" 
+                                                MinHeight="250" MaxHeight="500" ClipToBounds="True">
+                                            <Grid>
+                                                <controls:ZoomableImage Source="{Binding CurrentDisplayImage, Converter={StaticResource Base64ImageConverter}, TargetNullValue={x:Null}}"
+                                                                        Stretch="Uniform"/>
+                                                <controls:ZoomableImage Source="{Binding SelectedItem.ImageUrl, Converter={StaticResource Base64ImageConverter}}"
+                                                                        Stretch="Uniform"
+                                                                        Visibility="{Binding CurrentDisplayImage, Converter={StaticResource InverseNullToVisConverter}}"/>
+                                                
+                                                <Button Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Command="{Binding PreviousImageCommand}"
+                                                        VerticalAlignment="Center" 
+                                                        HorizontalAlignment="Left"
+                                                        Width="44" Height="44"
+                                                        Margin="8,0,0,0"
+                                                        Cursor="Hand"
+                                                        Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Grid>
+                                                                <Ellipse Fill="White" Opacity="0.9"/>
+                                                                <Path Data="M 28 8 L 12 22 L 28 36" 
+                                                                      Stroke="{DynamicResource TextBrush}" 
+                                                                      StrokeThickness="3.5"
+                                                                      StrokeLineJoin="Round"
+                                                                      StrokeStartLineCap="Round"
+                                                                      StrokeEndLineCap="Round"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                                <Button Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Command="{Binding NextImageCommand}"
+                                                        VerticalAlignment="Center" 
+                                                        HorizontalAlignment="Right"
+                                                        Width="44" Height="44"
+                                                        Margin="0,0,8,0"
+                                                        Cursor="Hand"
+                                                        Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Grid>
+                                                                <Ellipse Fill="White" Opacity="0.9"/>
+                                                                <Path Data="M 16 8 L 32 22 L 16 36"
+                                                                      Stroke="{DynamicResource TextBrush}"
+                                                                      StrokeThickness="3.5"
+                                                                      StrokeLineJoin="Round"
+                                                                      StrokeStartLineCap="Round"
+                                                                      StrokeEndLineCap="Round"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                        
+                                        <!-- Details area below image -->
+                                        <StackPanel Margin="0,16,0,0">
+                                            <!-- Type / Location / Discontinued / Layers badges -->
+                                            <WrapPanel Margin="0,0,0,12">
+                                                <Border Background="{DynamicResource PrimaryLightBrush}" 
+                                                        CornerRadius="4" 
+                                                        Padding="8,4" 
+                                                        Margin="0,0,8,4">
+                                                    <TextBlock Text="{Binding SelectedItem.Type}" Foreground="White" FontSize="12"/>
+                                                </Border>
+                                                <Border Background="{DynamicResource PrimaryBrush}" 
+                                                        CornerRadius="4" 
+                                                        Padding="8,4" 
+                                                        Margin="0,0,8,4"
+                                                        Visibility="{Binding SelectedItem.Subtype, Converter={StaticResource NullToVisConverter}}">
+                                                    <TextBlock Text="{Binding SelectedItem.Subtype}" Foreground="White" FontSize="12"/>
+                                                </Border>
+                                                <Border Background="{DynamicResource SidebarBrush}" 
+                                                        CornerRadius="4" 
+                                                        Padding="8,4"
+                                                        Margin="0,0,8,4"
+                                                        Visibility="{Binding SelectedItem.Location, Converter={StaticResource NullToVisConverter}}">
+                                                    <TextBlock Text="{Binding SelectedItem.Location}" Foreground="{DynamicResource TextBrush}" FontSize="12"/>
+                                                </Border>
+                                                <Border Background="{DynamicResource DangerBrush}" 
+                                                        CornerRadius="4" 
+                                                        Padding="8,4"
+                                                        Margin="0,0,8,4"
+                                                        Visibility="{Binding SelectedItem.IsDiscontinued, Converter={StaticResource BoolToVisConverter}}">
+                                                    <TextBlock Text="Discontinued" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <Border Background="{DynamicResource SidebarBrush}" 
+                                                        CornerRadius="4" 
+                                                        Padding="8,4"
+                                                        Margin="0,0,8,4"
+                                                        Visibility="{Binding SelectedItem.StencilLayers, Converter={StaticResource NullToVisConverter}}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedItem.Type, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}" Value="Collapsed">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Foreground="{DynamicResource TextBrush}" FontSize="12">
+                                                        <Run Text="{Binding SelectedItem.StencilLayers, Mode=OneWay}"/>
+                                                        <Run Text=" layers"/>
+                                                    </TextBlock>
+                                                </Border>
+                                            </WrapPanel>
+
+                                            <!-- Inventory Stock section (tracked types only) -->
+                                            <Border Background="{DynamicResource SidebarBrush}"
+                                                    CornerRadius="8" Padding="16" Margin="0,0,0,16"
+                                                    Visibility="{Binding IsTrackedItem, Converter={StaticResource BoolToVisConverter}}">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <TextBlock Text="Stock" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <Button Style="{StaticResource SecondaryButton}" Content="Edit"
+                                                                    Command="{Binding StartEditStockCommand}"
+                                                                    Visibility="{Binding IsEditingStock, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"
+                                                                    Padding="8,4"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <!-- Stock display -->
+                                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                                                                Visibility="{Binding IsEditingStock, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                                                        <Border CornerRadius="20" Padding="16,8">
+                                                            <Border.Background>
+                                                                <MultiBinding Converter="{StaticResource StockLevelBgConverter}">
+                                                                    <Binding Path="SelectedItem.Type"/>
+                                                                    <Binding Path="SelectedItem.CurrentStock"/>
+                                                                </MultiBinding>
+                                                            </Border.Background>
+                                                            <TextBlock FontSize="20" FontWeight="Bold">
+                                                                <TextBlock.Foreground>
+                                                                    <MultiBinding Converter="{StaticResource StockLevelFgConverter}">
+                                                                        <Binding Path="SelectedItem.Type"/>
+                                                                        <Binding Path="SelectedItem.CurrentStock"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Foreground>
+                                                                <Run Text="{Binding SelectedItem.CurrentStock, TargetNullValue='?', Mode=OneWay}"/>
+                                                                <Run Text=" "/>
+                                                                <Run Text="{Binding StockUnitLabel, Mode=OneWay}"/>
+                                                                <Run Text=" remaining"/>
+                                                            </TextBlock>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <!-- Edit stock inline -->
+                                                    <StackPanel Visibility="{Binding IsEditingStock, Converter={StaticResource BoolToVisConverter}}" Margin="0,10,0,0">
+                                                        <TextBlock Text="Enter new count:" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,4"/>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBox Style="{StaticResource SearchTextBox}" Width="100"
+                                                                     Text="{Binding EditStockValue, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            <TextBlock Text="{Binding StockUnitLabel}" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextMutedBrush}" Margin="8,0,12,0"/>
+                                                            <Button Style="{StaticResource PrimaryButton}" Content="Save" Margin="0,0,8,0"
+                                                                    Command="{Binding SaveEditStockCommand}"/>
+                                                            <Button Style="{StaticResource SecondaryButton}" Content="Cancel"
+                                                                    Command="{Binding CancelEditStockCommand}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Two-column info grid -->
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,12">
+                                                    <TextBlock Text="Type" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                    <TextBlock Text="{Binding SelectedItem.Type}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,12"
+                                                            Visibility="{Binding SelectedItem.ItemNumber, Converter={StaticResource NullToVisConverter}}">
+                                                    <TextBlock Text="Item Number" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                    <TextBlock Text="{Binding SelectedItem.ItemNumber}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0"/>
+                                                </StackPanel>
+
+
+                                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,12">
+                                                    <TextBlock Text="Theme" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                    <TextBlock Text="{Binding SelectedItem.Theme}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,12"
+                                                            Visibility="{Binding SelectedItem.Location, Converter={StaticResource NullToVisConverter}}">
+                                                    <TextBlock Text="Location" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                    <TextBlock Text="{Binding SelectedItem.Location}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Sentiment Pills with Edit -->
+                                            <StackPanel Margin="0,0,0,12">
+                                                <!-- Header row -->
+                                                <Grid Margin="0,0,0,8"
+                                                      Visibility="{Binding SentimentLines.Count, Converter={StaticResource CountToVisConverter}}">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="Sentiments"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                                   FontSize="{DynamicResource DetailLabelFontSize}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <Button HorizontalAlignment="Right"
+                                                            Click="EditSentimentsButton_Click"
+                                                            Cursor="Hand"
+                                                            Visibility="{Binding IsEditingSentiments, Converter={StaticResource InverseBoolToVisConverter}, FallbackValue=Visible}">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Bd" Background="Transparent"
+                                                                        BorderBrush="{DynamicResource BorderBrush}"
+                                                                        BorderThickness="1" CornerRadius="4" Padding="8,3">
+                                                                    <TextBlock Text="Edit" FontSize="11"
+                                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Pills view (not editing) -->
+                                                <ItemsControl ItemsSource="{Binding SentimentLines}"
+                                                              Visibility="{Binding IsEditingSentiments, Converter={StaticResource InverseBoolToVisConverter}, FallbackValue=Visible}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,0,6,6"
+                                                                    CornerRadius="16"
+                                                                    Background="{DynamicResource SidebarBrush}"
+                                                                    BorderBrush="{DynamicResource PrimaryBrush}"
+                                                                    BorderThickness="1"
+                                                                    Padding="0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding}"
+                                                                               FontSize="12"
+                                                                               Foreground="{DynamicResource TextBrush}"
+                                                                               VerticalAlignment="Center"
+                                                                               Padding="10,5,6,5"/>
+                                                                    <Button Tag="{Binding}"
+                                                                            Click="DeleteSentimentLine_Click"
+                                                                            Cursor="Hand"
+                                                                            ToolTip="Remove this sentiment"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,4,0">
+                                                                        <Button.Template>
+                                                                            <ControlTemplate TargetType="Button">
+                                                                                <Border x:Name="DelBd"
+                                                                                        Background="Transparent"
+                                                                                        CornerRadius="8"
+                                                                                        Padding="3">
+                                                                                    <TextBlock Text="✕"
+                                                                                               FontSize="9"
+                                                                                               FontWeight="Bold"
+                                                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                                                               VerticalAlignment="Center"/>
+                                                                                </Border>
+                                                                                <ControlTemplate.Triggers>
+                                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                                        <Setter TargetName="DelBd" Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+                                                                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                                                    </Trigger>
+                                                                                </ControlTemplate.Triggers>
+                                                                            </ControlTemplate>
+                                                                        </Button.Template>
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <!-- Inline edit mode -->
+                                                <StackPanel Visibility="{Binding IsEditingSentiments, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}">
+                                                    <TextBlock Text="One sentiment per line:" FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
+                                                    <TextBox x:Name="SentimentEditBox"
+                                                             Text="{Binding EditingSentimentsText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Background="{DynamicResource SidebarBrush}"
+                                                             Foreground="{DynamicResource TextBrush}"
+                                                             BorderBrush="{DynamicResource PrimaryBrush}"
+                                                             BorderThickness="1"
+                                                             Padding="8"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             Height="120"
+                                                             VerticalScrollBarVisibility="Auto"
+                                                             FontSize="12"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Right">
+                                                        <Button Content="Cancel"
+                                                                Click="CancelEditSentiments_Click"
+                                                                Style="{StaticResource SecondaryButton}"
+                                                                Margin="0,0,8,0"
+                                                                Height="30" Padding="12,0"/>
+                                                        <Button Content="Save"
+                                                                Click="SaveEditSentiments_Click"
+                                                                Style="{StaticResource PrimaryButton}"
+                                                                Height="30" Padding="12,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Add sentiments prompt when none exist -->
+                                                <Button Click="EditSentimentsButton_Click"
+                                                        Cursor="Hand"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{Binding SentimentLines.Count, Converter={StaticResource InverseCountToVisConverter}, FallbackValue=Collapsed}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="Bd" Background="Transparent"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1" CornerRadius="4" Padding="10,4">
+                                                                <TextBlock Text="+ Add sentiments" FontSize="12"
+                                                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                            </StackPanel>
+
+                                            <!-- Price -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <StackPanel Visibility="{Binding SelectedItem.Price, Converter={StaticResource NullToVisConverter}}" Margin="0,0,24,0">
+                                                    <TextBlock Text="Price" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                    <TextBlock Text="{Binding SelectedItem.Price, StringFormat='${0:F2}'}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Purchased From -->
+                                            <StackPanel Margin="0,8,0,0"
+                                                        Visibility="{Binding SelectedItem.PurchasedFrom, Converter={StaticResource NullToVisConverter}}">
+                                                <TextBlock Text="Purchased From" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                <TextBlock Text="{Binding SelectedItem.PurchasedFrom}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- Notes -->
+                                            <StackPanel Margin="0,8,0,0"
+                                                        Visibility="{Binding SelectedItem.Notes, Converter={StaticResource NullToVisConverter}}">
+                                                <TextBlock Text="Notes" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                                <TextBlock Text="{Binding SelectedItem.Notes}" FontSize="{DynamicResource DetailValueFontSize}" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <!-- Sentiments from this Set -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                        Visibility="{Binding SentimentImages.Count, Converter={StaticResource CountToVisConverter}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Sentiments from this Set" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,16"/>
+                                        <ItemsControl ItemsSource="{Binding SentimentImages}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="150"
+                                                            Margin="0,0,12,12"
+                                                            CornerRadius="6"
+                                                            BorderBrush="{DynamicResource BorderBrush}"
+                                                            BorderThickness="1"
+                                                            Background="{DynamicResource SidebarBrush}">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="90"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                            <!-- Snip image -->
+                                                            <Image Grid.Row="0"
+                                                                   Source="{Binding ImageData, Converter={StaticResource Base64ImageConverter}}"
+                                                                   Stretch="Uniform"
+                                                                   Margin="8,8,8,4"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                            <!-- Sentiment text -->
+                                                            <TextBlock Grid.Row="1"
+                                                                       Text="{Binding ExtractedText}"
+                                                                       FontSize="11"
+                                                                       Foreground="{DynamicResource TextBrush}"
+                                                                       TextWrapping="Wrap"
+                                                                       TextAlignment="Center"
+                                                                       MaxHeight="44"
+                                                                       Margin="8,0,8,4"/>
+                                                            <!-- Delete button -->
+                                                            <Button Grid.Row="2"
+                                                                    Content="Remove"
+                                                                    Tag="{Binding Id}"
+                                                                    Click="DeleteSentimentSnip_Click"
+                                                                    Cursor="Hand"
+                                                                    Margin="8,0,8,8"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    Padding="0,4">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border Background="{DynamicResource DangerBrush}"
+                                                                                CornerRadius="4"
+                                                                                Padding="6,4"
+                                                                                x:Name="Bd">
+                                                                            <TextBlock Text="Remove"
+                                                                                       FontSize="10"
+                                                                                       FontWeight="SemiBold"
+                                                                                       Foreground="White"
+                                                                                       HorizontalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Purchase History Section -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,16">
+                                            <TextBlock Text="Purchase History" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Border Background="{DynamicResource SidebarBrush}" CornerRadius="4" Padding="12,6" Margin="0,0,8,0">
+                                                    <TextBlock Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold">
+                                                        <Run Text="Qty: "/>
+                                                        <Run Text="{Binding TotalQuantity, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <Border Background="{DynamicResource SidebarBrush}" CornerRadius="4" Padding="12,6" Margin="0,0,12,0">
+                                                    <TextBlock Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold">
+                                                        <Run Text="Total: $"/>
+                                                        <Run Text="{Binding TotalSpend, Mode=OneWay, StringFormat='{}{0:F2}'}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <Button Style="{StaticResource PrimaryButton}" 
+                                                        Content="Add Purchase" 
+                                                        Command="{Binding StartAddPurchaseCommand}"
+                                                        Visibility="{Binding IsAddingPurchase, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        
+                                        <!-- Add Purchase Form -->
+                                        <Border Background="{DynamicResource SidebarBrush}" 
+                                                CornerRadius="8" 
+                                                Padding="16" 
+                                                Margin="0,0,0,16"
+                                                Visibility="{Binding IsAddingPurchase, Converter={StaticResource BoolToVisConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="Add New Purchase" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                        <TextBlock Text="Quantity" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewPurchaseQuantity, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                        <TextBlock Text="Price Per Item" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewPurchasePrice, TargetNullValue=''}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="Date Purchased" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <DatePicker SelectedDate="{Binding NewPurchaseDate}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Text="{Binding PurchaseErrorMessage}" 
+                                                           Foreground="{DynamicResource DangerBrush}" 
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,8,0,0"
+                                                           Visibility="{Binding PurchaseErrorMessage, Converter={StaticResource NullToVisConverter}, ConverterParameter=Inverse}"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                                                    <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelAddPurchaseCommand}" Margin="0,0,8,0"/>
+                                                    <Button Style="{StaticResource PrimaryButton}" Content="Save Purchase" Command="{Binding SavePurchaseCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                        
+                                        <!-- Purchase List -->
+                                        <ItemsControl ItemsSource="{Binding ItemPurchases}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource SidebarBrush}" 
+                                                            CornerRadius="6" 
+                                                            Padding="12" 
+                                                            Margin="0,0,0,8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" Background="{DynamicResource PrimaryLightBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                                                                <TextBlock Text="{Binding Quantity, StringFormat='x{0}'}" Foreground="White" FontWeight="SemiBold"/>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding PricePerItem, StringFormat='${0:F2} each'}" Foreground="{DynamicResource TextBrush}"/>
+                                                                <TextBlock Text="{Binding DatePurchased, StringFormat='d'}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="2" 
+                                                                       Text="{Binding TotalPrice, StringFormat='${0:F2}'}" 
+                                                                       FontWeight="SemiBold" 
+                                                                       Foreground="{DynamicResource SuccessBrush}" 
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,16,0"/>
+                                                            <Button Grid.Column="3" 
+                                                                    Style="{StaticResource SecondaryButton}" 
+                                                                    Content="X" 
+                                                                    Width="28" Height="28"
+                                                                    Foreground="{DynamicResource DangerBrush}"
+                                                                    Command="{Binding DataContext.DeletePurchaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        
+                                        <TextBlock Text="No purchases recorded yet" 
+                                                   Foreground="{DynamicResource TextMutedBrush}" 
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"
+                                                   Visibility="{Binding ItemPurchases.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Right sidebar: Related Items + Gallery -->
+                        <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="16">
+                                    <!-- Related Items -->
+                                    <StackPanel Visibility="{Binding RelatedItems.Count, Converter={StaticResource CountToVisConverter}}">
+                                        <TextBlock Text="Related Items" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                    <ItemsControl ItemsSource="{Binding RelatedItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource SidebarBrush}" 
+                                                            CornerRadius="8" 
+                                                            Padding="12" 
+                                                            Margin="0,0,0,10" 
+                                                            Cursor="Hand"
+                                                            MouseLeftButtonUp="RelatedItemCard_Click">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="75"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" Width="75" Height="75" CornerRadius="6" Background="{DynamicResource CardBrush}" ClipToBounds="True">
+                                                                <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}}" Stretch="UniformToFill"/>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding Type}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                                                                <TextBlock Text="{Binding Subtype}" Foreground="{DynamicResource PrimaryBrush}" FontSize="11"
+                                                                           Visibility="{Binding Subtype, Converter={StaticResource NullToVisConverter}}"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <!-- Gallery thumbnails -->
+                                    <StackPanel Margin="0,8,0,0"
+                                                Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}">
+                                        <TextBlock Text="Gallery" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                        <WrapPanel>
+                                            <Border Width="60" Height="60" 
+                                                    CornerRadius="4" 
+                                                    Background="{DynamicResource SidebarBrush}" 
+                                                    Margin="0,0,6,6"
+                                                    Cursor="Hand"
+                                                    ClipToBounds="True"
+                                                    Visibility="{Binding SelectedItem.ImageUrl, Converter={StaticResource NullToVisConverter}}"
+                                                    MouseLeftButtonUp="MainImageThumbnail_Click">
+                                                <Image Source="{Binding SelectedItem.ImageUrl, Converter={StaticResource Base64ImageConverter}}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding ItemImages}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="60" Height="60" 
+                                                                CornerRadius="4" 
+                                                                Background="{DynamicResource SidebarBrush}" 
+                                                                Margin="0,0,6,6"
+                                                                Cursor="Hand"
+                                                                ClipToBounds="True"
+                                                                Tag="{Binding}"
+                                                                MouseLeftButtonUp="GalleryThumbnail_Click">
+                                                            <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}}" Stretch="UniformToFill"/>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Grid>
+            
+            <Grid Visibility="{Binding IsAddingItem, Converter={StaticResource BoolToVisConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <Border Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+                        <DockPanel>
+                            <TextBlock Text="Add New Item" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                <Button Style="{StaticResource SecondaryButton}" Content="🔍 Look Up TE Item" Command="{Binding OpenCatalogLookupCommand}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Duplicate-in-inventory warning. Visible while DuplicateItemWarning is set;
+                         the banner exposes a quick link to view the existing item, plus a dismiss. -->
+                    <Border Background="#FFFFF4D6"
+                            BorderBrush="#FFE0B341"
+                            BorderThickness="0,0,0,1"
+                            Padding="24,10"
+                            Visibility="{Binding DuplicateItemWarning, Converter={StaticResource NullToVisConverter}}">
+                        <DockPanel>
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <Button Content="View Existing Item"
+                                        Command="{Binding ViewDuplicateItemCommand}"
+                                        Background="Transparent"
+                                        Foreground="#FF6B4500"
+                                        BorderBrush="#FFE0B341"
+                                        BorderThickness="1"
+                                        Padding="10,4"
+                                        FontSize="12"
+                                        Cursor="Hand"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="✕"
+                                        Command="{Binding DismissDuplicateWarningCommand}"
+                                        Background="Transparent"
+                                        Foreground="#FF8A5A00"
+                                        BorderThickness="0"
+                                        Padding="6,2"
+                                        FontSize="14"
+                                        Cursor="Hand"
+                                        ToolTip="Dismiss"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="ALREADY IN YOUR INVENTORY"
+                                           FontSize="10" FontWeight="Bold"
+                                           Foreground="#FF8A5A00"
+                                           Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding DuplicateItemWarning}"
+                                           FontSize="13"
+                                           Foreground="#FF6B4500"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Image dropzone + compact Related Items -->
+                        <StackPanel Grid.Column="0">
+                            <!-- Images card -->
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Images" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border x:Name="ItemDropZone"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            MinHeight="180"
+                                            Cursor="Hand"
+                                            AllowDrop="True"
+                                            DragEnter="DropZone_DragEnter"
+                                            DragLeave="DropZone_DragLeave"
+                                            Drop="ItemDropZone_Drop"
+                                            MouseLeftButtonUp="ItemDropZone_Click">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                                            <TextBlock Text="Drop photo or click"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <TextBlock Text="(drag &amp; drop also works)"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ItemsControl ItemsSource="{Binding NewItemImages}" HorizontalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel HorizontalAlignment="Center"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="4">
+                                                            <Border Width="80" Height="80" CornerRadius="6" Background="{DynamicResource CardBrush}">
+                                                                <Image Source="{Binding Converter={StaticResource Base64ImageConverter}}" Stretch="UniformToFill"/>
+                                                            </Border>
+                                                            <Button Content="X"
+                                                                    Width="20" Height="20"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="0,-4,-4,0"
+                                                                    Background="{DynamicResource DangerBrush}"
+                                                                    Foreground="White"
+                                                                    FontSize="10"
+                                                                    Cursor="Hand"
+                                                                    Click="RemoveItemImage_Click"
+                                                                    Tag="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Click to add more"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,8,0,0"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Related Items card (compact sidebar) -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                    Background="{DynamicResource SidebarBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="Related Items" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Optional — pick items that go with this one."
+                                               Foreground="{DynamicResource TextMutedBrush}" FontSize="11" Margin="0,0,0,8"/>
+
+                                    <TextBox Style="{StaticResource SearchTextBox}"
+                                             Tag="Search items..."
+                                             Text="{Binding RelatedItemsSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,0,8"/>
+
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                            Background="{DynamicResource InputBackgroundBrush}"
+                                            Height="280">
+                                        <Grid>
+                                            <TextBlock Text="Type to search…"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="12" FontStyle="Italic"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding RelatedItemsSearchText, Converter={StaticResource NullToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding FilteredSelectableItems}" Padding="4">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,2"
+                                                                Background="{DynamicResource SidebarBrush}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1" CornerRadius="6"
+                                                                Padding="6"
+                                                                Cursor="Hand">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="40"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Border Grid.Column="0" Width="36" Height="36"
+                                                                        CornerRadius="4"
+                                                                        Background="{DynamicResource CardBrush}"
+                                                                        ClipToBounds="True">
+                                                                    <Image Stretch="UniformToFill">
+                                                                        <Image.Source>
+                                                                            <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                                                <Binding Path="ItemId"/>
+                                                                                <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                                            </MultiBinding>
+                                                                        </Image.Source>
+                                                                    </Image>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding ItemName}"
+                                                                           FontSize="12" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource TextBrush}"
+                                                                           TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="8,0,4,0"/>
+                                                                <CheckBox Grid.Column="2"
+                                                                          IsChecked="{Binding IsSelected}"
+                                                                          VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Form fields -->
+                        <StackPanel Grid.Column="2">
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Item Name *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}">
+                                        <TextBox.Style>
+                                            <Style TargetType="TextBox" BasedOn="{StaticResource SearchTextBox}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding NewItemNameHasError}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBox.Style>
+                                    </TextBox>
+                                    <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                            ToolTip="Item name is required"
+                                            Visibility="{Binding NewItemNameHasError, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                    </Border>
+                                </Grid>
+
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Type *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Grid.Column="0" x:Name="AddTypeComboBox"
+                                                      ItemsSource="{Binding ItemTypes}"
+                                                      SelectedItem="{Binding NewItemType}"
+                                                      Padding="12,10">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemTypeHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ComboBox.Style>
+                                            </ComboBox>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="Item type is required"
+                                                    Visibility="{Binding NewItemTypeHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Location" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <ComboBox ItemsSource="{Binding ItemLocations}" SelectedItem="{Binding NewItemLocation}" Padding="12,10"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Subtypes - visible when current type has subtypes defined -->
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding HasSubtypeCheckboxes, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="Subtypes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="8"
+                                            Padding="8,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- Selected subtypes shown inline as removable pills -->
+                                            <ItemsControl Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding SubtypeCheckboxes}" VerticalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Style="{StaticResource SelectedChipPill}"
+                                                                Visibility="{Binding IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Label}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                <Button Content="×"
+                                                                        Click="RemoveSelectedSubtype_Click"
+                                                                        Tag="{Binding}"
+                                                                        Background="Transparent" BorderThickness="0"
+                                                                        Foreground="White" FontWeight="Bold" FontSize="14"
+                                                                        Padding="0" Margin="6,0,0,0"
+                                                                        Cursor="Hand"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <!-- + Add toggle opens popup with full chip strip -->
+                                            <ToggleButton Grid.Column="0" x:Name="AddSubtypeToggle"
+                                                          Style="{StaticResource ChipToggle}"
+                                                          Content="+ Subtype"
+                                                          ClickMode="Press"/>
+                                            <Popup PlacementTarget="{Binding ElementName=AddSubtypeToggle}"
+                                                   Placement="Bottom"
+                                                   IsOpen="{Binding IsChecked, ElementName=AddSubtypeToggle, Mode=TwoWay}"
+                                                   AllowsTransparency="True"
+                                                   PopupAnimation="Slide"
+                                                   Opened="ChipPickerPopup_Opened"
+                                                   Closed="ChipPickerPopup_Closed">
+                                                <Border Background="{DynamicResource CardBrush}"
+                                                        BorderBrush="{DynamicResource PrimaryBrush}"
+                                                        BorderThickness="1" CornerRadius="10"
+                                                        Padding="10" Margin="0,4,0,0"
+                                                        MaxWidth="520">
+                                                    <ItemsControl ItemsSource="{Binding SubtypeCheckboxes}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <ToggleButton Style="{StaticResource ChipToggle}"
+                                                                              Content="{Binding Label}"
+                                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
+                                <TextBlock Text="Theme" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,16,0,8"/>
+                                <Border Background="{DynamicResource SidebarBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="8"
+                                        Padding="8,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Selected themes inline -->
+                                        <ItemsControl Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding ThemeCheckboxes}" VerticalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource SelectedChipPill}"
+                                                            Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisConverter}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                            <Button Content="×"
+                                                                    Click="RemoveSelectedTheme_Click"
+                                                                    Tag="{Binding}"
+                                                                    Background="Transparent" BorderThickness="0"
+                                                                    Foreground="White" FontWeight="Bold" FontSize="14"
+                                                                    Padding="0" Margin="6,0,0,0"
+                                                                    Cursor="Hand"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <ToggleButton Grid.Column="0" x:Name="AddThemeToggle"
+                                                      Style="{StaticResource ChipToggle}"
+                                                      Content="+ Theme"
+                                                      ClickMode="Press"/>
+                                        <Popup PlacementTarget="{Binding ElementName=AddThemeToggle}"
+                                               Placement="Bottom"
+                                               IsOpen="{Binding IsChecked, ElementName=AddThemeToggle, Mode=TwoWay}"
+                                               AllowsTransparency="True"
+                                               PopupAnimation="Slide"
+                                               Opened="ChipPickerPopup_Opened"
+                                               Closed="ChipPickerPopup_Closed">
+                                            <Border Background="{DynamicResource CardBrush}"
+                                                    BorderBrush="{DynamicResource PrimaryBrush}"
+                                                    BorderThickness="1" CornerRadius="10"
+                                                    Padding="10" Margin="0,4,0,0"
+                                                    MaxWidth="520">
+                                                <ItemsControl ItemsSource="{Binding ThemeCheckboxes}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <ToggleButton Style="{StaticResource ChipToggle}"
+                                                                          Content="{Binding Name}"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Combo Club sub-options: visible when "Combo Club" theme is selected -->
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding IsComboClubSelected, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="Combo Club" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding ComboClubOptions}"
+                                                  Visibility="{Binding HasComboClubOptions, Converter={StaticResource BoolToVisConverter}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ToggleButton Style="{StaticResource ChipToggle}"
+                                                              Content="{Binding Label}"
+                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <StackPanel Orientation="Horizontal"
+                                                Visibility="{Binding HasComboClubOptions, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                                        <TextBlock Text="Year / Info:"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBox Text="{Binding ComboClubYear, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="120"
+                                                 Background="{DynamicResource CardBrush}"
+                                                 Foreground="{DynamicResource TextBrush}"
+                                                 BorderBrush="{DynamicResource BorderBrush}"
+                                                 Padding="8,4"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <DockPanel Margin="0,16,0,8">
+                                    <TextBlock Text="Sentiments" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                                    <Button Command="{Binding CropSentimentsDuringAddCommand}"
+                                            Style="{StaticResource SecondaryButton}"
+                                            HorizontalAlignment="Right"
+                                            DockPanel.Dock="Right"
+                                            Padding="10,4"
+                                            FontSize="12"
+                                            Content="✂  Crop sentiments"/>
+                                </DockPanel>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemSentiments, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         MinHeight="120"
+                                         VerticalContentAlignment="Top"/>
+
+                                <!-- Stencil Layers - only visible when Type contains "stencil" -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}">
+                                    <TextBlock Text="Number of Layers" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemStencilLayers, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left"/>
+                                </StackPanel>
+
+                                <!-- Pack Size + Current Stock - only for tracked item types -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource IsTrackedTypeConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="How many per pack (individual units)" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                            <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemPackSize, TargetNullValue=''}" Width="140" HorizontalAlignment="Left"/>
+                                            <TextBlock Text="e.g. 25 for a pack of 25 sheets" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Current Stock" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                            <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemCurrentStock, TargetNullValue=''}" Width="140" HorizontalAlignment="Left"/>
+                                            <TextBlock Text="Individual units on hand right now" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                                
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Price" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding NewItemPrice, TargetNullValue=''}">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource SearchTextBox}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemPriceHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="{Binding NewItemPriceErrorMessage}"
+                                                    Visibility="{Binding NewItemPriceHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Item Number" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Text="Date Purchased" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <DatePicker Grid.Column="0" SelectedDate="{Binding NewItemDatePurchased}" Padding="12,10">
+                                                <DatePicker.Style>
+                                                    <Style TargetType="DatePicker" BasedOn="{StaticResource {x:Type DatePicker}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemDatePurchasedHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </DatePicker.Style>
+                                            </DatePicker>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="{Binding NewItemDatePurchasedErrorMessage}"
+                                                    Visibility="{Binding NewItemDatePurchasedHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Discontinued Checkbox -->
+                                <CheckBox IsChecked="{Binding NewItemIsDiscontinued}" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Discontinued" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Mark if this item is no longer available" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </StackPanel>
+                        </Border>
+                        
+
+                        <!-- Purchase Details Card -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Purchase Details" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,16"/>
+
+                                <TextBlock Text="Purchased From" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <ComboBox SelectedItem="{Binding NewItemPurchasedFrom}"
+                                          ItemsSource="{Binding PurchasedFromOptions}"
+                                          Padding="12,10" Margin="0,0,0,16"/>
+
+                                <TextBlock Text="Site URL" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemSiteUrl, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Optional — link to the product page so you can repurchase later."
+                                           FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,16"/>
+
+                                <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemNotes, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                        </Border>
+
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Sticky footer: Cancel / Save & add another / Save item -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource BackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="24,12">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Content="Cancel"
+                                Command="{Binding CancelAddCommand}"
+                                Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Content="Save &amp; add another"
+                                Command="{Binding SaveItemAndAddAnotherCommand}"
+                                Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Content="Save item"
+                                Command="{Binding SaveItemCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Edit Item Form -->
+            <Grid Visibility="{Binding IsEditingItem, Converter={StaticResource BoolToVisConverter}}"
+                  Background="{DynamicResource BackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+                    <TextBlock Text="Edit Item" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Image dropzone + compact Related Items -->
+                        <StackPanel Grid.Column="0">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Images" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border x:Name="EditItemDropZone"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            MinHeight="180"
+                                            Cursor="Hand"
+                                            AllowDrop="True"
+                                            DragEnter="DropZone_DragEnter"
+                                            DragLeave="DropZone_DragLeave"
+                                            Drop="EditItemDropZone_Drop"
+                                            MouseLeftButtonUp="EditItemDropZone_Click">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                                            <TextBlock Text="Drop photo or click"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <TextBlock Text="(drag &amp; drop also works)"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ItemsControl ItemsSource="{Binding NewItemImages}" HorizontalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel HorizontalAlignment="Center"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="4">
+                                                            <Border Width="80" Height="80" CornerRadius="6" Background="{DynamicResource CardBrush}">
+                                                                <Image Source="{Binding Converter={StaticResource Base64ImageConverter}}" Stretch="UniformToFill"/>
+                                                            </Border>
+                                                            <Button Content="X"
+                                                                    Width="20" Height="20"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="0,-4,-4,0"
+                                                                    Background="{DynamicResource DangerBrush}"
+                                                                    Foreground="White"
+                                                                    FontSize="10"
+                                                                    Cursor="Hand"
+                                                                    Click="RemoveItemImage_Click"
+                                                                    Tag="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Click to add more"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,8,0,0"
+                                                       Visibility="{Binding NewItemImages.Count, Converter={StaticResource CountToVisConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                    Background="{DynamicResource SidebarBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="Related Items" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Optional — pick items that go with this one."
+                                               Foreground="{DynamicResource TextMutedBrush}" FontSize="11" Margin="0,0,0,8"/>
+
+                                    <TextBox Style="{StaticResource SearchTextBox}"
+                                             Tag="Search items..."
+                                             Text="{Binding RelatedItemsSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,0,8"/>
+
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                            Background="{DynamicResource InputBackgroundBrush}"
+                                            Height="280">
+                                        <Grid>
+                                            <TextBlock Text="Type to search…"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="12" FontStyle="Italic"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding RelatedItemsSearchText, Converter={StaticResource NullToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding FilteredSelectableItems}" Padding="4">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,2"
+                                                                    Background="{DynamicResource SidebarBrush}"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1" CornerRadius="6"
+                                                                    Padding="6"
+                                                                    Cursor="Hand">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="40"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border Grid.Column="0" Width="36" Height="36"
+                                                                            CornerRadius="4"
+                                                                            Background="{DynamicResource CardBrush}"
+                                                                            ClipToBounds="True">
+                                                                        <Image Stretch="UniformToFill">
+                                                                            <Image.Source>
+                                                                                <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                                                    <Binding Path="ItemId"/>
+                                                                                    <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                                                </MultiBinding>
+                                                                            </Image.Source>
+                                                                        </Image>
+                                                                    </Border>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding ItemName}"
+                                                                               FontSize="12" FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource TextBrush}"
+                                                                               TextWrapping="Wrap"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="8,0,4,0"/>
+                                                                    <CheckBox Grid.Column="2"
+                                                                              IsChecked="{Binding IsSelected}"
+                                                                              VerticalAlignment="Center"/>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Form fields -->
+                        <StackPanel Grid.Column="2">
+                        
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Item Name *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}">
+                                        <TextBox.Style>
+                                            <Style TargetType="TextBox" BasedOn="{StaticResource SearchTextBox}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding NewItemNameHasError}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBox.Style>
+                                    </TextBox>
+                                    <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                            ToolTip="Item name is required"
+                                            Visibility="{Binding NewItemNameHasError, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                    </Border>
+                                </Grid>
+
+                                <Grid Margin="0,16,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Type *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Grid.Column="0"
+                                                      ItemsSource="{Binding ItemTypes}"
+                                                      SelectedItem="{Binding NewItemType}"
+                                                      Padding="12,10">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemTypeHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ComboBox.Style>
+                                            </ComboBox>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="Item type is required"
+                                                    Visibility="{Binding NewItemTypeHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Location" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <ComboBox ItemsSource="{Binding ItemLocations}" SelectedItem="{Binding NewItemLocation}" Padding="12,10"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Subtypes - compact picker -->
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding HasSubtypeCheckboxes, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="Subtypes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="8"
+                                            Padding="8,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ItemsControl Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding SubtypeCheckboxes}" VerticalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Style="{StaticResource SelectedChipPill}"
+                                                                Visibility="{Binding IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Label}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                <Button Content="×"
+                                                                        Click="RemoveSelectedSubtype_Click"
+                                                                        Tag="{Binding}"
+                                                                        Background="Transparent" BorderThickness="0"
+                                                                        Foreground="White" FontWeight="Bold" FontSize="14"
+                                                                        Padding="0" Margin="6,0,0,0"
+                                                                        Cursor="Hand"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <ToggleButton Grid.Column="0" x:Name="EditAddSubtypeToggle"
+                                                          Style="{StaticResource ChipToggle}"
+                                                          Content="+ Subtype"
+                                                          ClickMode="Press"/>
+                                            <Popup PlacementTarget="{Binding ElementName=EditAddSubtypeToggle}"
+                                                   Placement="Bottom"
+                                                   IsOpen="{Binding IsChecked, ElementName=EditAddSubtypeToggle, Mode=TwoWay}"
+                                                   AllowsTransparency="True"
+                                                   PopupAnimation="Slide"
+                                                   Opened="ChipPickerPopup_Opened"
+                                                   Closed="ChipPickerPopup_Closed">
+                                                <Border Background="{DynamicResource CardBrush}"
+                                                        BorderBrush="{DynamicResource PrimaryBrush}"
+                                                        BorderThickness="1" CornerRadius="10"
+                                                        Padding="10" Margin="0,4,0,0"
+                                                        MaxWidth="520">
+                                                    <ItemsControl ItemsSource="{Binding SubtypeCheckboxes}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <ToggleButton Style="{StaticResource ChipToggle}"
+                                                                              Content="{Binding Label}"
+                                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
+                                <TextBlock Text="Theme" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,16,0,8"/>
+                                <Border Background="{DynamicResource SidebarBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="8"
+                                        Padding="8,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ItemsControl Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding ThemeCheckboxes}" VerticalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource SelectedChipPill}"
+                                                            Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisConverter}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                            <Button Content="×"
+                                                                    Click="RemoveSelectedTheme_Click"
+                                                                    Tag="{Binding}"
+                                                                    Background="Transparent" BorderThickness="0"
+                                                                    Foreground="White" FontWeight="Bold" FontSize="14"
+                                                                    Padding="0" Margin="6,0,0,0"
+                                                                    Cursor="Hand"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <ToggleButton Grid.Column="0" x:Name="EditAddThemeToggle"
+                                                      Style="{StaticResource ChipToggle}"
+                                                      Content="+ Theme"
+                                                      ClickMode="Press"/>
+                                        <Popup PlacementTarget="{Binding ElementName=EditAddThemeToggle}"
+                                               Placement="Bottom"
+                                               IsOpen="{Binding IsChecked, ElementName=EditAddThemeToggle, Mode=TwoWay}"
+                                               AllowsTransparency="True"
+                                               PopupAnimation="Slide"
+                                               Opened="ChipPickerPopup_Opened"
+                                               Closed="ChipPickerPopup_Closed">
+                                            <Border Background="{DynamicResource CardBrush}"
+                                                    BorderBrush="{DynamicResource PrimaryBrush}"
+                                                    BorderThickness="1" CornerRadius="10"
+                                                    Padding="10" Margin="0,4,0,0"
+                                                    MaxWidth="520">
+                                                <ItemsControl ItemsSource="{Binding ThemeCheckboxes}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <ToggleButton Style="{StaticResource ChipToggle}"
+                                                                          Content="{Binding Name}"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Combo Club sub-options -->
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding IsComboClubSelected, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="Combo Club" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding ComboClubOptions}"
+                                                  Visibility="{Binding HasComboClubOptions, Converter={StaticResource BoolToVisConverter}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ToggleButton Style="{StaticResource ChipToggle}"
+                                                              Content="{Binding Label}"
+                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <StackPanel Orientation="Horizontal"
+                                                Visibility="{Binding HasComboClubOptions, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                                        <TextBlock Text="Year / Info:"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBox Text="{Binding ComboClubYear, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="120"
+                                                 Background="{DynamicResource CardBrush}"
+                                                 Foreground="{DynamicResource TextBrush}"
+                                                 BorderBrush="{DynamicResource BorderBrush}"
+                                                 Padding="8,4"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <DockPanel Margin="0,16,0,8">
+                                    <TextBlock Text="Sentiments" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                                    <Button Command="{Binding CropSentimentsDuringAddCommand}"
+                                            Style="{StaticResource SecondaryButton}"
+                                            HorizontalAlignment="Right"
+                                            DockPanel.Dock="Right"
+                                            Padding="10,4"
+                                            FontSize="12"
+                                            Content="✂  Crop sentiments"/>
+                                </DockPanel>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemSentiments, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         MinHeight="120"
+                                         VerticalContentAlignment="Top"/>
+
+                                <!-- Stencil Layers - only visible when Type contains "stencil" -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}">
+                                    <TextBlock Text="Number of Layers" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemStencilLayers, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left"/>
+                                </StackPanel>
+
+                                <!-- Pack Size + Current Stock - only for tracked item types -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource IsTrackedTypeConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="How many per pack (individual units)" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                            <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemPackSize, TargetNullValue=''}" Width="140" HorizontalAlignment="Left"/>
+                                            <TextBlock Text="e.g. 25 for a pack of 25 sheets" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Current Stock" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                            <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemCurrentStock, TargetNullValue=''}" Width="140" HorizontalAlignment="Left"/>
+                                            <TextBlock Text="Individual units on hand right now" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                                
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Price" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding NewItemPrice, TargetNullValue=''}">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource SearchTextBox}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemPriceHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="{Binding NewItemPriceErrorMessage}"
+                                                    Visibility="{Binding NewItemPriceHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Item Number" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Text="Date Purchased" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <DatePicker Grid.Column="0" SelectedDate="{Binding NewItemDatePurchased}" Padding="12,10">
+                                                <DatePicker.Style>
+                                                    <Style TargetType="DatePicker" BasedOn="{StaticResource {x:Type DatePicker}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewItemDatePurchasedHasError}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#FFD9534F"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </DatePicker.Style>
+                                            </DatePicker>
+                                            <Border Grid.Column="1" Style="{StaticResource ValidationBadge}"
+                                                    ToolTip="{Binding NewItemDatePurchasedErrorMessage}"
+                                                    Visibility="{Binding NewItemDatePurchasedHasError, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Style="{StaticResource ValidationBadgeText}"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Discontinued Checkbox -->
+                                <CheckBox IsChecked="{Binding NewItemIsDiscontinued}" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Discontinued" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Mark if this item is no longer available" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </StackPanel>
+                        </Border>
+                        
+
+                        <!-- Purchase Details Card -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Purchase Details" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,16"/>
+
+                                <TextBlock Text="Purchased From" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <ComboBox SelectedItem="{Binding NewItemPurchasedFrom}"
+                                          ItemsSource="{Binding PurchasedFromOptions}"
+                                          Padding="12,10" Margin="0,0,0,16"/>
+
+                                <TextBlock Text="Site URL" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemSiteUrl, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Optional — link to the product page so you can repurchase later."
+                                           FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,16"/>
+
+                                <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding NewItemNotes, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                        </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Sticky footer: Cancel / Delete / Save -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource BackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="24,12">
+                    <DockPanel>
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Content="Delete"
+                                Background="{DynamicResource DangerBrush}"
+                                Foreground="White"
+                                Command="{Binding DeleteItemCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                DockPanel.Dock="Left"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                            <Button Style="{StaticResource SecondaryButton}"
+                                    Content="Cancel"
+                                    Command="{Binding CancelEditCommand}"
+                                    Margin="0,0,12,0"/>
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Content="Save"
+                                    Command="{Binding UpdateItemCommand}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        
+        <Border Grid.Row="0" Grid.RowSpan="2" 
+                Background="{DynamicResource OverlayDimBrush}" 
+                Visibility="Collapsed">
+            <TextBlock Text="Loading..." 
+                       Foreground="White" 
+                       FontSize="18" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

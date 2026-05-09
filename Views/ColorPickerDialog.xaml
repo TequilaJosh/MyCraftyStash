@@ -1,0 +1,203 @@
+<Window x:Class="MyCraftyStash.Views.ColorPickerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pick a color"
+        Width="540" Height="380"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" x:Name="TitleText"
+                   Text="Pick a color"
+                   FontSize="16" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}"
+                   Margin="0,0,0,12"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="40"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Saturation/Value square. Hue is set by the slider; a white→hue
+                 horizontal gradient is overlaid with a black→transparent vertical
+                 gradient to produce the standard Photoshop-style SV picker. -->
+            <Border Grid.Column="0"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    SnapsToDevicePixels="True">
+                <Grid x:Name="SvCanvas"
+                      Width="238" Height="238"
+                      Cursor="Cross"
+                      MouseLeftButtonDown="Sv_MouseDown"
+                      MouseMove="Sv_MouseMove"
+                      MouseLeftButtonUp="Sv_MouseUp">
+                    <Rectangle x:Name="SvHueRect"/>
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                                <GradientStop Color="#FF000000" Offset="0"/>
+                                <GradientStop Color="#00000000" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <!-- Picker marker (ellipse with white outline + dark ring) -->
+                    <Canvas IsHitTestVisible="False">
+                        <Ellipse x:Name="SvMarker"
+                                 Width="14" Height="14"
+                                 Stroke="White" StrokeThickness="2"/>
+                        <Ellipse Width="14" Height="14"
+                                 Stroke="Black" StrokeThickness="1"
+                                 Canvas.Left="{Binding (Canvas.Left), ElementName=SvMarker}"
+                                 Canvas.Top="{Binding (Canvas.Top), ElementName=SvMarker}"
+                                 Opacity="0.5"/>
+                    </Canvas>
+                </Grid>
+            </Border>
+
+            <!-- Hue slider: vertical rainbow strip. Click anywhere to set hue. -->
+            <Border Grid.Column="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    Margin="12,0,12,0"
+                    SnapsToDevicePixels="True">
+                <Grid x:Name="HueCanvas"
+                      Width="22" Height="238"
+                      Cursor="SizeNS"
+                      MouseLeftButtonDown="Hue_MouseDown"
+                      MouseMove="Hue_MouseMove"
+                      MouseLeftButtonUp="Hue_MouseUp">
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#FFFF0000" Offset="0.000"/>
+                                <GradientStop Color="#FFFFFF00" Offset="0.167"/>
+                                <GradientStop Color="#FF00FF00" Offset="0.333"/>
+                                <GradientStop Color="#FF00FFFF" Offset="0.500"/>
+                                <GradientStop Color="#FF0000FF" Offset="0.667"/>
+                                <GradientStop Color="#FFFF00FF" Offset="0.833"/>
+                                <GradientStop Color="#FFFF0000" Offset="1.000"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <Canvas IsHitTestVisible="False">
+                        <!-- Triangular hue indicator on each side -->
+                        <Polygon x:Name="HueMarker"
+                                 Points="0,0 6,5 0,10"
+                                 Fill="{DynamicResource TextBrush}"/>
+                    </Canvas>
+                </Grid>
+            </Border>
+
+            <!-- Right column: numeric inputs + preview + presets -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Original" FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   Margin="0,0,0,4"/>
+                        <Border x:Name="OriginalSwatch"
+                                Height="40"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4,0,0,4"
+                                Background="Transparent"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="New" FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   Margin="0,0,0,4"/>
+                        <Border x:Name="NewSwatch"
+                                Height="40"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="0,4,4,0"
+                                Background="Transparent"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Hex" Grid.Column="0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBox x:Name="HexBox" Grid.Column="1"
+                             Padding="6,4"
+                             FontFamily="Consolas"
+                             Background="{DynamicResource InputBackgroundBrush}"
+                             Foreground="{DynamicResource TextBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             KeyDown="HexBox_KeyDown"
+                             LostFocus="HexBox_LostFocus"/>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="R" FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBox x:Name="RBox" Padding="6,4"
+                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 Foreground="{DynamicResource TextBrush}"
+                                 BorderBrush="{DynamicResource BorderBrush}"
+                                 LostFocus="RgbBox_LostFocus"
+                                 KeyDown="RgbBox_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="G" FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBox x:Name="GBox" Padding="6,4"
+                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 Foreground="{DynamicResource TextBrush}"
+                                 BorderBrush="{DynamicResource BorderBrush}"
+                                 LostFocus="RgbBox_LostFocus"
+                                 KeyDown="RgbBox_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="B" FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBox x:Name="BBox" Padding="6,4"
+                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 Foreground="{DynamicResource TextBrush}"
+                                 BorderBrush="{DynamicResource BorderBrush}"
+                                 LostFocus="RgbBox_LostFocus"
+                                 KeyDown="RgbBox_KeyDown"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Width="100"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="0,0,8,0"
+                    Click="Cancel_Click"/>
+            <Button Content="Use this color" Width="140"
+                    Style="{StaticResource PrimaryButton}"
+                    Click="Ok_Click"
+                    IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

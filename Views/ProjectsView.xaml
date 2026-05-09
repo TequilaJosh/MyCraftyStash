@@ -1,0 +1,1224 @@
+<UserControl x:Class="MyCraftyStash.Views.ProjectsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:controls="clr-namespace:MyCraftyStash.Controls"
+             xmlns:converters="clr-namespace:MyCraftyStash.Converters"
+             Background="{DynamicResource BackgroundBrush}">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" Padding="32,22,32,14">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
+                    <TextBlock Style="{StaticResource Breadcrumb}" Text="Projects"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource PageTitle}" Text="Project gallery" Margin="0,4,0,0"/>
+                <TextBlock Style="{StaticResource PageSubtitle}"
+                           Text="Track your makes — each linked to the supplies you used."/>
+            </StackPanel>
+        </Border>
+        
+        <Grid Grid.Row="1" Background="{DynamicResource BackgroundBrush}">
+            <Grid Visibility="{Binding IsAddingProject, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+              <Grid Visibility="{Binding IsEditingProject, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                <Grid Visibility="{Binding IsViewingDetails, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" Background="Transparent" Padding="32,4,32,16">
+                        <StackPanel>
+                            <!-- Row 1: name search + type ComboBox + item ComboBox + clear -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                                <TextBox Style="{StaticResource SearchTextBox}"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="240" VerticalAlignment="Center"
+                                         KeyDown="ProjectSearch_KeyDown"/>
+
+                                <!-- Type ComboBox -->
+                                <ComboBox ItemsSource="{Binding SearchTypeOptions}"
+                                          SelectedItem="{Binding SelectedSearchType, Mode=TwoWay}"
+                                          Width="160" Height="50" Margin="10,0,0,0" Padding="8,6"
+                                          VerticalAlignment="Center"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}">
+                                    <ComboBox.Resources>
+                                        <Style TargetType="ComboBoxItem">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        </Style>
+                                    </ComboBox.Resources>
+                                </ComboBox>
+
+                                <!-- Specific item ComboBox - populated after type (and subtypes) are chosen -->
+                                <ComboBox ItemsSource="{Binding SearchItemOptions}"
+                                          SelectedItem="{Binding SelectedSearchItem, Mode=TwoWay}"
+                                          DisplayMemberPath="Name"
+                                          Width="220" Height="50" Margin="10,0,0,0" Padding="8,6"
+                                          VerticalAlignment="Center"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}"
+                                          Visibility="{Binding HasSearchItemOptions, Converter={StaticResource BoolToVisConverter}}">
+                                    <ComboBox.Resources>
+                                        <Style TargetType="ComboBoxItem">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        </Style>
+                                    </ComboBox.Resources>
+                                </ComboBox>
+
+                                <!-- Clear all filters -->
+                                <Button Content="✕ Clear"
+                                        Command="{Binding ClearSearchFiltersCommand}"
+                                        Margin="10,0,0,0" Padding="10,6"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        FontSize="12" Cursor="Hand"/>
+                            </StackPanel>
+
+                            <!-- Row 2: subtype checkboxes (shown when a type is selected and it has subtypes) -->
+                            <ItemsControl ItemsSource="{Binding SearchSubtypeFilters}"
+                                          Margin="0,10,0,0"
+                                          Visibility="{Binding HasSearchSubtypeFilters, Converter={StaticResource BoolToVisConverter}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Label}"
+                                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                  Foreground="{DynamicResource TextBrush}"
+                                                  Margin="0,0,14,4"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Projects}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="False"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="24"
+                             SelectedItem="{x:Null}"
+                             SelectionMode="Single"
+                             IsTabStop="False">
+                        <ListBox.Resources>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.Resources>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardStyle}"
+                                        Width="280"
+                                        Margin="0,0,16,16"
+                                        Cursor="Hand"
+                                        MouseLeftButtonUp="ProjectCard_Click">
+                                    <StackPanel>
+                                        <Border MaxHeight="220" CornerRadius="8" Background="{DynamicResource SidebarBrush}" Margin="0,0,0,12">
+                                            <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}, ConverterParameter=300}" Stretch="Uniform"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource CardNameFontSize}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Description}"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   FontSize="{DynamicResource CardTypeFontSize}"
+                                                   Margin="0,4,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Foreground="{DynamicResource PrimaryBrush}" 
+                                                   FontSize="{DynamicResource CardTypeFontSize}" 
+                                                   Margin="0,8,0,0">
+                                            <Run Text="{Binding ProjectItems.Count, Mode=OneWay}"/>
+                                            <Run Text=" items used"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+                
+                <Grid Visibility="{Binding IsViewingDetails, Converter={StaticResource BoolToVisConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header with Back / Delete -->
+                    <Border Grid.Row="0" Background="{DynamicResource CardBrush}" 
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,12">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource SecondaryButton}" 
+                                        Content="Back" 
+                                        Command="{Binding BackToListCommand}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource PrimaryButton}" 
+                                        Content="&#x2714; I Made One!" 
+                                        Command="{Binding StartAddCreationCommand}"
+                                        Visibility="{Binding IsAddingCreation, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"
+                                        Margin="0,0,12,0"
+                                        Background="{DynamicResource AccentBrush}"/>
+                                <Button Style="{StaticResource PrimaryButton}" 
+                                        Content="Edit Project" 
+                                        Command="{Binding StartEditProjectCommand}"
+                                        Margin="0,0,12,0"/>
+                                <Button Style="{StaticResource SecondaryButton}" 
+                                        Content="Delete" 
+                                        Foreground="{DynamicResource DangerBrush}"
+                                        Command="{Binding DeleteProjectCommand}"
+                                        CommandParameter="{Binding SelectedProject}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Two-column layout -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="250" MinWidth="150" MaxWidth="550"/>
+                        </Grid.ColumnDefinitions>
+
+                        <GridSplitter Grid.Column="1"
+                                      Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                      Background="{DynamicResource BorderBrush}" Cursor="SizeWE"
+                                      ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+
+                        <!-- Left: Main image + details -->
+                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="24">
+                            <StackPanel>
+                                <!-- Main Image with nav arrows -->
+                                <Border Height="400" CornerRadius="8" Background="{DynamicResource SidebarBrush}" Margin="0,0,0,16" ClipToBounds="True">
+                                    <Grid>
+                                        <controls:ZoomableImage Source="{Binding CurrentDisplayImage, Converter={StaticResource Base64ImageConverter}, TargetNullValue={x:Null}}"
+                                                                Stretch="Uniform"/>
+                                        <controls:ZoomableImage Source="{Binding SelectedProject.ImageUrl, Converter={StaticResource Base64ImageConverter}}"
+                                                                Stretch="Uniform"
+                                                                Visibility="{Binding CurrentDisplayImage, Converter={StaticResource InverseNullToVisConverter}}"/>
+                                        
+                                        <Button Style="{StaticResource SecondaryButton}" 
+                                                Content="&lt;" 
+                                                Command="{Binding PreviousImageCommand}"
+                                                VerticalAlignment="Center" 
+                                                HorizontalAlignment="Left"
+                                                Width="36" Height="36"
+                                                Margin="8,0,0,0"
+                                                Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}"/>
+                                        <Button Style="{StaticResource SecondaryButton}" 
+                                                Content="&gt;" 
+                                                Command="{Binding NextImageCommand}"
+                                                VerticalAlignment="Center" 
+                                                HorizontalAlignment="Right"
+                                                Width="36" Height="36"
+                                                Margin="0,0,8,0"
+                                                Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}"/>
+                                    </Grid>
+                                </Border>
+                                
+                                <!-- Project Details -->
+                                <Border Style="{StaticResource CardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SelectedProject.Name}" FontSize="{DynamicResource DetailTitleFontSize}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                        
+                                        <StackPanel Visibility="{Binding SelectedProject.Description, Converter={StaticResource NullToVisConverter}}" Margin="0,0,0,12">
+                                            <TextBlock Text="Description" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                            <TextBlock Text="{Binding SelectedProject.Description}" 
+                                                       FontSize="{DynamicResource DetailValueFontSize}" 
+                                                       Foreground="{DynamicResource TextBrush}" 
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Margin="0,0,0,4">
+                                            <TextBlock Text="Date Created" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource DetailLabelFontSize}"/>
+                                            <TextBlock Text="{Binding SelectedProject.CreatedAt, StringFormat='{}{0:MMMM d, yyyy}'}" 
+                                                       FontSize="{DynamicResource DetailValueFontSize}" 
+                                                       Foreground="{DynamicResource TextBrush}" 
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                <!-- "I Made One" creation form -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                        Visibility="{Binding IsAddingCreation, Converter={StaticResource BoolToVisConverter}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Record Project Creation" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Notes (optional)" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6"/>
+                                        <TextBox Style="{StaticResource SearchTextBox}"
+                                                 Text="{Binding NewCreationNotes, UpdateSourceTrigger=PropertyChanged}"
+                                                 TextWrapping="Wrap" AcceptsReturn="True" Height="80"
+                                                 Margin="0,0,0,12"/>
+                                        <CheckBox IsChecked="{Binding SubtractMaterialsOnCreation}" Margin="0,0,0,16"
+                                                  Foreground="{DynamicResource TextBrush}">
+                                            <StackPanel>
+                                                <TextBlock Text="Subtract materials from inventory" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock Text="Reduces stock for cardstock, envelopes, foils, etc." FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                        </CheckBox>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelAddCreationCommand}" Margin="0,0,8,0"/>
+                                            <Button Style="{StaticResource PrimaryButton}" Content="Save Creation" Command="{Binding SaveCreationCommand}" Background="{DynamicResource AccentBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- How It Was Made -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                        Visibility="{Binding CardBuild, Converter={StaticResource NullToVisConverter}}">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,12">
+                                            <TextBlock Text="How It Was Made" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                            <Button Style="{StaticResource SecondaryButton}"
+                                                    Content="Edit Card Build"
+                                                    Command="{Binding EditCardBuildCommand}"
+                                                    HorizontalAlignment="Right"
+                                                    Padding="12,6"/>
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding CardBuild.Steps}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Label}"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               FontSize="12"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,0,0,3">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Section}" Value="inside">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                                        <Setter Property="Margin" Value="16,0,0,3"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Build a new card build when none exists yet -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                        Visibility="{Binding CardBuild, Converter={StaticResource NullToVisConverter}, ConverterParameter=Inverse}">
+                                    <StackPanel>
+                                        <TextBlock Text="How It Was Made" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <TextBlock Text="No build recorded for this project yet."
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Margin="0,0,0,12"/>
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                                Content="Build Card"
+                                                Command="{Binding EditCardBuildCommand}"
+                                                HorizontalAlignment="Left"
+                                                Padding="16,8"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Notes -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                        Visibility="{Binding SelectedProject.Notes, Converter={StaticResource NullToVisConverter}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Notes" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding SelectedProject.Notes}" FontSize="12" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Creation History -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Creation History" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="No creations recorded yet"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,4"
+                                                   Visibility="{Binding ProjectCreations.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                        <ItemsControl ItemsSource="{Binding ProjectCreations}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource SidebarBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                                                                <TextBlock Text="&#x2714; Made" Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding CreatedOn, StringFormat='MMMM d, yyyy h:mm tt'}" Foreground="{DynamicResource TextBrush}" FontSize="13"/>
+                                                                <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                                                           Visibility="{Binding Notes, Converter={StaticResource NullToVisConverter}}"/>
+                                                            </StackPanel>
+                                                            <Button Grid.Column="2" Style="{StaticResource SecondaryButton}"
+                                                                    Content="X" Width="28" Height="28" Foreground="{DynamicResource DangerBrush}"
+                                                                    Command="{Binding DataContext.DeleteCreationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Right Sidebar: Gallery + Items Used -->
+                        <Border Grid.Column="2"
+                                Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1,0,0,0">
+                            <ScrollViewer x:Name="ItemsUsedScrollViewer" VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="16">
+                                    <!-- Gallery Thumbnails -->
+                                    <TextBlock Text="Gallery" 
+                                               FontSize="14" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,8"
+                                               Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}"/>
+                                    
+                                    <ItemsControl ItemsSource="{Binding ProjectImages}" 
+                                                  Margin="0,0,0,16"
+                                                  Visibility="{Binding TotalImages, Converter={StaticResource GreaterThanOneToVisConverter}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="48" Height="48"
+                                                        CornerRadius="4"
+                                                        Background="{DynamicResource SidebarBrush}"
+                                                        Margin="2"
+                                                        Cursor="Hand"
+                                                        MouseLeftButtonUp="GalleryThumb_Click">
+                                                    <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}}" Stretch="Uniform"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    
+                                    <!-- Items Used -->
+                                    <TextBlock Text="Items Used" 
+                                               FontSize="14" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,8"/>
+                                    
+                                    <TextBlock Text="No items linked"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               FontSize="12"
+                                               Visibility="{Binding SelectedProject.ProjectItems.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+
+                                    <ItemsControl ItemsSource="{Binding ViewProjectItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource SidebarBrush}" 
+                                                        CornerRadius="6" 
+                                                        Padding="10" 
+                                                        Margin="0,0,0,10" 
+                                                        Cursor="Hand"
+                                                        MouseLeftButtonUp="ItemUsedCard_Click"
+                                                        Tag="{Binding}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="75"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="75" Height="75" CornerRadius="4" Background="{DynamicResource CardBrush}">
+                                                            <Image Source="{Binding Item.ImageUrl, Converter={StaticResource Base64ImageConverter}, ConverterParameter=100}" Stretch="UniformToFill"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Item.Name}"
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="13"
+                                                                       Foreground="{DynamicResource TextBrush}"
+                                                                       TextWrapping="Wrap"/>
+                                                            <TextBlock Text="{Binding Item.Type}"
+                                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                                       FontSize="12"/>
+                                                            <TextBlock Text="{Binding Item.Subtype}"
+                                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                                       FontSize="11"
+                                                                       Visibility="{Binding Item.Subtype, Converter={StaticResource NullToVisConverter}}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid Visibility="{Binding IsEditingProject, Converter={StaticResource BoolToVisConverter}}"
+                  Background="{DynamicResource BackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+                    <TextBlock Text="Edit Project" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="260"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Image dropzone + Card Builder Wizard launcher -->
+                        <StackPanel Grid.Column="0">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Images" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border x:Name="EditProjectDropZone"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            MinHeight="220"
+                                            Cursor="Hand"
+                                            AllowDrop="True"
+                                            DragEnter="DropZone_DragEnter"
+                                            DragLeave="DropZone_DragLeave"
+                                            Drop="EditProjectDropZone_Drop"
+                                            MouseLeftButtonUp="EditProjectDropZone_Click">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                                            <TextBlock Text="Drop photo or click"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <TextBlock Text="(drag &amp; drop also works)"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ItemsControl ItemsSource="{Binding NewProjectImages}" HorizontalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel HorizontalAlignment="Center"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="4">
+                                                            <Border Width="80" Height="80" CornerRadius="6" Background="{DynamicResource CardBrush}">
+                                                                <Image Source="{Binding Converter={StaticResource Base64ImageConverter}}" Stretch="Uniform"/>
+                                                            </Border>
+                                                            <Button Content="X"
+                                                                    Width="20" Height="20"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="0,-4,-4,0"
+                                                                    Background="{DynamicResource DangerBrush}"
+                                                                    Foreground="White"
+                                                                    FontSize="10"
+                                                                    Cursor="Hand"
+                                                                    Click="RemoveProjectImage_Click"
+                                                                    Tag="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Click to add more"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,8,0,0"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Content="Card Builder"
+                                    Command="{Binding OpenCardBuildWizardCommand}"
+                                    Padding="20,14"
+                                    FontSize="16"
+                                    Margin="0,12,0,0"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <!-- MIDDLE COLUMN: Form fields with Card Build above Notes -->
+                        <StackPanel Grid.Column="2">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Project Name *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <!-- Card Build summary appears above Notes; shows pending build (just-run wizard) when present. -->
+                                    <Border CornerRadius="8" Margin="0,16,0,0" Padding="12"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            Visibility="{Binding HasPendingCardBuild, Converter={StaticResource BoolToVisConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="Card build (pending — saves with project)"
+                                                       Foreground="{DynamicResource PrimaryBrush}" FontSize="12" FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            <ItemsControl ItemsSource="{Binding PendingBuildStepList}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Label}"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   Margin="0,0,0,3">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Section}" Value="inside">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                                            <Setter Property="Margin" Value="16,0,0,3"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Saved card build summary when no pending edit but a build exists -->
+                                    <Border CornerRadius="8" Margin="0,16,0,0" Padding="12"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding HasPendingCardBuild}" Value="False"/>
+                                                            <Condition Binding="{Binding CardBuild, Converter={StaticResource NullToBoolConverter}}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="Card build (saved)"
+                                                       Foreground="{DynamicResource TextMutedBrush}" FontSize="12" FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            <ItemsControl ItemsSource="{Binding CardBuild.Steps}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Label}"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   Margin="0,0,0,3">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Section}" Value="inside">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                                            <Setter Property="Margin" Value="16,0,0,3"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,16,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}"
+                                             Text="{Binding NewProjectNotes, UpdateSourceTrigger=PropertyChanged}"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="120"
+                                             VerticalScrollBarVisibility="Auto"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Items Used (read-only list, edited via Card Builder) -->
+                        <StackPanel Grid.Column="4">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Items Used" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Edit via the Card Builder."
+                                               FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="0,0,0,8"/>
+                                    <TextBlock Text="No items yet"
+                                               FontSize="12" Foreground="{DynamicResource TextMutedBrush}"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,12,0,12"
+                                               Visibility="{Binding OrderedProjectItems.Count, Converter={StaticResource ZeroToVisConverter}}"/>
+                                    <ItemsControl ItemsSource="{Binding OrderedProjectItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource SidebarBrush}"
+                                                        BorderBrush="{DynamicResource BorderBrush}"
+                                                        BorderThickness="1" CornerRadius="6"
+                                                        Margin="0,0,0,6" Padding="6">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="40"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="36" Height="36"
+                                                                CornerRadius="3"
+                                                                Background="{DynamicResource CardBrush}"
+                                                                ClipToBounds="True">
+                                                            <Image Stretch="UniformToFill">
+                                                                <Image.Source>
+                                                                    <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                                        <Binding Path="ItemId"/>
+                                                                        <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                                    </MultiBinding>
+                                                                </Image.Source>
+                                                            </Image>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding ItemName}"
+                                                                   FontSize="11" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   TextWrapping="Wrap"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="6,0,0,0"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Sticky footer: Cancel + Save Changes -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource BackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="24,12">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Content="Cancel"
+                                Command="{Binding CancelEditProjectCommand}"
+                                Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Content="Save Changes"
+                                Command="{Binding SaveEditProjectCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Visibility="{Binding IsAddingProject, Converter={StaticResource BoolToVisConverter}}"
+                  Background="{DynamicResource BackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+                    <TextBlock Text="Add Project" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Image dropzone + Card Builder Wizard launcher -->
+                        <StackPanel Grid.Column="0">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Images" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <Border x:Name="ProjectDropZone"
+                                            Background="{DynamicResource SidebarBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            MinHeight="220"
+                                            Cursor="Hand"
+                                            AllowDrop="True"
+                                            DragEnter="DropZone_DragEnter"
+                                            DragLeave="DropZone_DragLeave"
+                                            Drop="ProjectDropZone_Drop"
+                                            MouseLeftButtonUp="ProjectDropZone_Click">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                                            <TextBlock Text="Drop photo or click"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <TextBlock Text="(drag &amp; drop also works)"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                            <ItemsControl ItemsSource="{Binding NewProjectImages}" HorizontalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel HorizontalAlignment="Center"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="4">
+                                                            <Border Width="80" Height="80" CornerRadius="6" Background="{DynamicResource CardBrush}">
+                                                                <Image Source="{Binding Converter={StaticResource Base64ImageConverter}}" Stretch="Uniform"/>
+                                                            </Border>
+                                                            <Button Content="X"
+                                                                    Width="20" Height="20"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="0,-4,-4,0"
+                                                                    Background="{DynamicResource DangerBrush}"
+                                                                    Foreground="White"
+                                                                    FontSize="10"
+                                                                    Cursor="Hand"
+                                                                    Click="RemoveProjectImage_Click"
+                                                                    Tag="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Click to add more"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,8,0,0"
+                                                       Visibility="{Binding NewProjectImages.Count, Converter={StaticResource CountToVisConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card Builder Wizard launch button — sits under the image dropzone in
+                                 the left column so it's discoverable without competing with the
+                                 footer's Cancel / Save buttons. Intentionally sized larger than
+                                 the rest of the app's buttons (taller padding + bigger font) so it
+                                 reads as the primary "start crafting" action on this page. -->
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Content="Card Builder"
+                                    Command="{Binding OpenCardBuildWizardCommand}"
+                                    Padding="20,14"
+                                    FontSize="16"
+                                    Margin="0,12,0,0"
+                                    HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Form fields -->
+                        <StackPanel Grid.Column="2">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Project Name *" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,16,0,8"/>
+                                    <TextBox Style="{StaticResource SearchTextBox}"
+                                             Text="{Binding NewProjectNotes, UpdateSourceTrigger=PropertyChanged}"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MinHeight="120"
+                                             VerticalScrollBarVisibility="Auto"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Pending build summary, only when the user has run the wizard -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0"
+                                    Background="{DynamicResource SidebarBrush}"
+                                    Visibility="{Binding HasPendingCardBuild, Converter={StaticResource BoolToVisConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Card build ready — items will be added when you save"
+                                               Foreground="{DynamicResource PrimaryBrush}" FontSize="12" FontWeight="SemiBold"
+                                               Margin="0,0,0,8"/>
+                                    <ItemsControl ItemsSource="{Binding PendingBuildStepList}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Label}"
+                                                           Foreground="{DynamicResource TextBrush}"
+                                                           FontSize="12"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,0,0,3">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Section}" Value="inside">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                                    <Setter Property="Margin" Value="16,0,0,3"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <Border Visibility="Collapsed">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Type picker -->
+                                    <StackPanel Grid.Column="0">
+                                        <Button Command="{Binding ToggleTypePickerCommand}"
+                                                HorizontalAlignment="Stretch">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                            CornerRadius="4" Background="{DynamicResource MultiPickerBrush}"
+                                                            Padding="10,8" Cursor="Hand">
+                                                        <Grid>
+                                                            <TextBlock Text="{Binding TypePickerDisplay}"
+                                                                       Foreground="{DynamicResource TextBrush}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="▾" HorizontalAlignment="Right"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                CornerRadius="4" Background="{DynamicResource MultiPickerBrush}"
+                                                Visibility="{Binding IsTypePickerOpen, Converter={StaticResource BoolToVisConverter}}">
+                                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding FilterTypeItems}" Margin="8,4">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}"
+                                                                      Margin="0,4" Foreground="{DynamicResource TextBrush}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- Theme picker -->
+                                    <StackPanel Grid.Column="2">
+                                        <Button Command="{Binding ToggleThemePickerCommand}"
+                                                HorizontalAlignment="Stretch">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                            CornerRadius="4" Background="{DynamicResource MultiPickerBrush}"
+                                                            Padding="10,8" Cursor="Hand">
+                                                        <Grid>
+                                                            <TextBlock Text="{Binding ThemePickerDisplay}"
+                                                                       Foreground="{DynamicResource TextBrush}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="▾" HorizontalAlignment="Right"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                CornerRadius="4" Background="{DynamicResource MultiPickerBrush}"
+                                                Visibility="{Binding IsThemePickerOpen, Converter={StaticResource BoolToVisConverter}}">
+                                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding FilterThemeItems}" Margin="8,4">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}"
+                                                                      Margin="0,4" Foreground="{DynamicResource TextBrush}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Subtype checkboxes (visible when one type selected) -->
+                                <ItemsControl ItemsSource="{Binding SubtypeFilters}"
+                                              Visibility="{Binding HasSubtypeFilters, Converter={StaticResource BoolToVisConverter}}"
+                                              Margin="0,0,0,8">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsChecked}" Content="{Binding Label}"
+                                                      Foreground="{DynamicResource TextBrush}" Margin="0,0,12,4"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Two-panel picker -->
+                                <Grid Height="340">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="220"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Mini card grid -->
+                                    <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                            Background="{DynamicResource InputBackgroundBrush}">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding FilteredSelectableItems}" Padding="6">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="115" Margin="4"
+                                                                Background="{DynamicResource SidebarBrush}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1" CornerRadius="6"
+                                                                Cursor="Hand">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Grid>
+                                                                <Border Height="100" CornerRadius="5,5,0,0"
+                                                                        Background="{DynamicResource CardBrush}"
+                                                                        ClipToBounds="True">
+                                                                    <Image Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                        <Image.Source>
+                                                                            <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                                                <Binding Path="ItemId"/>
+                                                                                <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                                            </MultiBinding>
+                                                                        </Image.Source>
+                                                                    </Image>
+                                                                </Border>
+                                                                <TextBlock Text="{Binding ItemName}"
+                                                                           FontSize="11" TextWrapping="Wrap"
+                                                                           Foreground="{DynamicResource TextBrush}"
+                                                                           Margin="6,104,6,6"
+                                                                           MaxHeight="34"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                                          Margin="4,4,0,0"
+                                                                          VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <!-- Selected items panel -->
+                                    <Border Grid.Column="2"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="4">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Border Grid.Row="0" Padding="10,7"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="0,0,0,1"
+                                                    Background="{DynamicResource SidebarBrush}">
+                                                <TextBlock Text="Items Used" FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </Border>
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="6">
+                                                <ItemsControl ItemsSource="{Binding OrderedProjectItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource BackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1" CornerRadius="5"
+                                                                    Margin="0,0,0,6" Padding="6">
+                                                                <StackPanel>
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="40"/>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Border Grid.Column="0" Width="36" Height="36"
+                                                                                CornerRadius="3"
+                                                                                Background="{DynamicResource CardBrush}"
+                                                                                ClipToBounds="True">
+                                                                            <Image Stretch="UniformToFill">
+                                                                                <Image.Source>
+                                                                                    <MultiBinding Converter="{StaticResource AsyncThumbnailConverter}">
+                                                                                        <Binding Path="ItemId"/>
+                                                                                        <Binding Source="{x:Static converters:BindingRefreshProxy.Instance}" Path="Counter"/>
+                                                                                    </MultiBinding>
+                                                                                </Image.Source>
+                                                                            </Image>
+                                                                        </Border>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding ItemName}"
+                                                                                   FontSize="11" FontWeight="SemiBold"
+                                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                                   TextWrapping="Wrap"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="6,0,4,0"/>
+                                                                        <CheckBox Grid.Column="2"
+                                                                                  IsChecked="{Binding IsSelected}"
+                                                                                  VerticalAlignment="Top"/>
+                                                                    </Grid>
+                                                                    <!-- Amount used for tracked types -->
+                                                                    <StackPanel Visibility="{Binding ShowAmountConfirmSection, Converter={StaticResource BoolToVisConverter}}"
+                                                                                Margin="0,6,0,0">
+                                                                        <TextBlock FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,3">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Text" Value="Sheets used:"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsCardstock}" Value="False">
+                                                                                            <Setter Property="Text" Value="Amount used:"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                        <StackPanel Visibility="{Binding AmountIsEditable, Converter={StaticResource BoolToVisConverter}}">
+                                                                            <TextBox Style="{StaticResource SearchTextBox}"
+                                                                                     Text="{Binding AmountUsed, TargetNullValue=''}"
+                                                                                     FontSize="11" Padding="6,4"
+                                                                                     IsReadOnly="{Binding IsWholeUnit}"/>
+                                                                            <Button Content="Confirm"
+                                                                                    Command="{Binding ConfirmAmountCommand}"
+                                                                                    Margin="0,4,0,0"
+                                                                                    Padding="6,3" FontSize="11"
+                                                                                    Background="{DynamicResource PrimaryBrush}"
+                                                                                    Foreground="White"
+                                                                                    BorderThickness="0"
+                                                                                    Cursor="Hand"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Visibility="{Binding AmountIsEditable, Converter={StaticResource InverseBoolToVisConverter}}">
+                                                                            <Border Background="{DynamicResource SidebarBrush}"
+                                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                                    BorderThickness="1" CornerRadius="3"
+                                                                                    Padding="6,4" Cursor="Hand">
+                                                                                <Border.InputBindings>
+                                                                                    <MouseBinding MouseAction="LeftClick"
+                                                                                                  Command="{Binding UnlockAmountCommand}"/>
+                                                                                </Border.InputBindings>
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <TextBlock Text="{Binding AmountUsed}"
+                                                                                               FontSize="11" FontWeight="SemiBold"
+                                                                                               Foreground="{DynamicResource TextBrush}"/>
+                                                                                    <TextBlock Text=" ✎" FontSize="10"
+                                                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Sticky footer: Cancel + Save Project (Card Builder lives under the
+                     image dropzone in the left column). -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource BackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="24,12">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Content="Cancel"
+                                Command="{Binding CancelAddCommand}"
+                                Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Content="Save Project"
+                                Command="{Binding SaveProjectCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        
+        <Border Grid.Row="0" Grid.RowSpan="2" 
+                Background="{DynamicResource OverlayDimBrush}" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+            <TextBlock Text="Loading..." 
+                       Foreground="White" 
+                       FontSize="18" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,118 @@
+<UserControl x:Class="MyCraftyStash.Views.SocialView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:MyCraftyStash.Views"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tab Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Margin="20,0">
+
+                <!-- Calendar Tab -->
+                <Border Padding="16,12" Cursor="Hand" Margin="0,0,4,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveSocialTab}" Value="Calendar">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding ShowCalendarCommand}"/>
+                    </Border.InputBindings>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📅" FontSize="15" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Calendar" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveSocialTab}" Value="Calendar">
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Address Book Tab -->
+                <Border Padding="16,12" Cursor="Hand">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveSocialTab}" Value="AddressBook">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding ShowAddressBookCommand}"/>
+                    </Border.InputBindings>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📋" FontSize="15" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Address Book" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveSocialTab}" Value="AddressBook">
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </Border>
+
+        <!-- Tab Content -->
+        <Grid Grid.Row="1">
+
+            <views:CalendarView DataContext="{Binding CalendarVM}">
+                <views:CalendarView.Style>
+                    <Style TargetType="views:CalendarView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DataContext.ActiveSocialTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Calendar">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:CalendarView.Style>
+            </views:CalendarView>
+
+            <views:AddressBookView DataContext="{Binding AddressBookVM}">
+                <views:AddressBookView.Style>
+                    <Style TargetType="views:AddressBookView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DataContext.ActiveSocialTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="AddressBook">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:AddressBookView.Style>
+            </views:AddressBookView>
+
+        </Grid>
+    </Grid>
+</UserControl>

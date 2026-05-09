@@ -1,0 +1,93 @@
+# J and H Inventory — Release Notes
+#
+# This file is read by the in-app "What's New" popup after each successful
+# update. The publish script copies it to the install share so every user
+# sees the same notes when their app updates itself.
+#
+# Format reminder (full docs in changelog.example.txt):
+#   ## X.Y.Z.W              <- version header (most-recent FIRST)
+#   - Bullet                <- one short bullet per change
+#
+# New sections go ABOVE older ones.
+
+## 1.0.2.9
+- "Look Up TE Item" now warns you when a catalog item is already in your
+  inventory. Each search result gets a green "In your inventory" tag, the
+  preview pane shows a yellow banner naming the existing item, and the
+  result count line tells you how many of the matches are duplicates —
+  so you can stop importing the same stamp set twice.
+- Adding an item by hand checks for duplicates as you type. A yellow
+  banner appears under the form header the moment the name or item
+  number matches something already in your inventory, with a "View
+  Existing Item" shortcut to jump straight to it (or ✕ to dismiss).
+- Save now highlights every missing or invalid field at once instead of
+  surfacing one error at a time. Empty Item Name, missing Type, an
+  oversized price, or a future purchase date each get a red border on
+  the field and a red "!" badge beside it — hover the badge to see why
+  it's flagged. The badge clears as soon as you fix the field.
+
+## 1.0.2.8
+- Edit Project page rebuilt to match the Add Project layout: sticky title
+  bar, image dropzone on the left with a Card Builder button beneath, form
+  fields in the middle (with the saved card build summary now shown above
+  Notes), and an Items Used panel on the right. Items Used is read-only
+  here — additions and deletions happen through the Card Builder so the
+  build and the items list never disagree.
+- "Edit Card Build" button on the project detail page (and a "Build Card"
+  call-to-action when a project has no build yet) opens the wizard, and
+  saving replaces the project's existing build cleanly while merging any
+  new wizard items into the project's items list without dropping
+  anything that was already there.
+- Wizard now reloads with everything you previously selected when you
+  re-edit a build — every section, every layer, every per-layer ink
+  color. Saved as a JSON snapshot in a new state_snapshot column on
+  project_card_builds (multi-user, server-side, alongside the existing
+  flat step records). Builds saved before this update will load empty
+  the first time; after one re-save they round-trip in full.
+- Foil Cardstock picker no longer leaks Foil-It items (and any other
+  subtype whose name was a prefix of another). Subtype matching now
+  respects comma-separated tag boundaries instead of doing a raw
+  substring check.
+- Sentiment Search "unsnipped sets" navigation reliably opens the chosen
+  item in inventory — clears all filters before looking it up and falls
+  back to a direct DB fetch if the item isn't in the current filtered
+  list.
+- Card build step labels now wrap to multiple lines instead of being
+  truncated, so long step descriptions stay legible in the build summary.
+
+## 1.0.2.7
+- Wishlist redesigned: each list is its own tab across the top, with item
+  counts and an estimated total at the top of the active list.
+- Importing a Taylored Expressions wishlist now reads the list's title
+  straight off the page and offers to create a new local list with the
+  same name — paste the URL, hit import, done.
+- New "Add item from link" button lets you paste any product URL to drop
+  a single item onto your active wishlist.
+- Tab strip moved to its own row underneath the action buttons, with ‹ ›
+  arrows that page through your lists when you have more than fit on
+  screen — no scrollbar, no buttons getting hidden.
+- "Import CSV" button is hidden for now while the importer gets reworked.
+
+- Card Builder Wizard renamed simply "Card Builder"; the REPORTS section
+  header is back in the sidebar.
+- Stencils now walk you through every layer one at a time. The header
+  shows "Layer X of Y" and remembers what inks, glitter, Happy Medium and
+  Astro Paste you used on each layer — every pick lands in the build
+  summary and the items-used log so nothing slips through.
+- Each per-layer Glitter / Happy Medium / Astro Paste picker is now a
+  multi-select list with Confirm and Clear buttons, hidden until you tick
+  the matching checkbox. Switching layers gives you a clean slate.
+- Cardstock pages line up cleanly: pickers stack on the left, "Confirm
+  Cardstock" stays full-width across cardbase, background mat, and
+  sentiment cardstock screens.
+- Hover color is the same warm cream tan everywhere in the wizard — no
+  more accidental Windows blue on a few of the buttons.
+- Card build summary now lists per-layer stencil details, adhesives at
+  every stage, and details captured on background mats, additional mats,
+  focal mats, sentiments, and the inside of the card. Nothing the user
+  enters in the wizard goes missing from the saved project anymore.
+- Popup pickers (inks, item lookups) close themselves when you scroll the
+  page underneath them, so the rest of the wizard scrolls normally.
+
+- "What's New" popup (this dialog) shows a short summary the first time
+  you launch the app after each update.

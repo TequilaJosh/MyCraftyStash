@@ -1,0 +1,27 @@
+# J and H Inventory — Release Notes
+#
+# Copy this file to the install share as `changelog.txt`:
+#     \\Win-u5iq2hisnh3\e\Installation\changelog.txt
+#
+# After every publish, append a new section ABOVE the previous ones with the
+# version you just shipped and a few short bullets of what changed.  The app
+# pops up the "What's New" dialog after a successful upgrade and shows every
+# section between the previously-installed version and the new one.
+#
+# Format rules (kept dead-simple):
+#   * Version header line: "## X.Y.Z.W"  (or "== X.Y.Z.W ==" or just "X.Y.Z.W")
+#   * Bullets:             "- something"  (or "* something" or "• something")
+#   * Lines starting with # are ignored.
+#   * Blank lines are ignored.
+#   * Sections without bullets are skipped.
+
+## 1.0.5.0
+- Stencil layer stepper now captures every layer's inks, glitter, Happy Medium and Astro Paste picks into the build summary.
+- Card builder summary now lists per-layer details, adhesives at every stage, and items used on every mat / focal / sentiment / inside section.
+- Per-layer pickers added with confirm + clear buttons; popup dismisses when you scroll outside it.
+- Cardstock tab tightened up: pickers stack on the left, "Confirm Cardstock" stays full width.
+
+## 1.0.4.0
+- Card Builder Wizard renamed to "Card Builder".
+- REPORTS section header restored to the sidebar.
+- Hover color unified across every card builder button.

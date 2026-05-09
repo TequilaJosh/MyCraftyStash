@@ -1,0 +1,548 @@
+<UserControl x:Class="MyCraftyStash.Views.AddressBookView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:views="clr-namespace:MyCraftyStash.Views"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="Address Book" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Store and manage addresses and notes for people you know"
+                               FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Style="{StaticResource SecondaryButton}" Content="+ Add Person"
+                        Command="{Binding StartAddCommand}"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Padding="14,8"/>
+            </Grid>
+        </Border>
+
+        <!-- Body: Two-column layout -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" MinWidth="240"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Search + List -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
+                    Background="{DynamicResource SidebarBrush}">
+                <DockPanel>
+                    <!-- Search Bar -->
+                    <Border DockPanel.Dock="Top" Padding="12,10" Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Style="{StaticResource SearchTextBox}"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Tag="Search name, city, notes...">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return" Command="{Binding SearchCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="✕"
+                                    Command="{Binding ClearSearchCommand}"
+                                    Margin="6,0,0,0" Padding="8,6" FontSize="11"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Loading indicator -->
+                    <TextBlock DockPanel.Dock="Top" Text="Loading..." Foreground="{DynamicResource TextMutedBrush}"
+                               HorizontalAlignment="Center" Margin="0,12,0,0"
+                               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"/>
+
+                    <!-- Entry List -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Empty State -->
+                            <TextBlock Text="No entries found. Click '+ Add Person' to get started."
+                                       Foreground="{DynamicResource TextMutedBrush}" FontSize="13"
+                                       TextWrapping="Wrap" TextAlignment="Center" Margin="20,48,20,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Entries.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ItemsControl ItemsSource="{Binding Entries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="8,4" CornerRadius="8" Padding="12,10" Cursor="Hand"
+                                                BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                        </DataTrigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.SelectEntryCommand, RelativeSource={RelativeSource AncestorType=views:AddressBookView}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding FullName}" FontWeight="SemiBold"
+                                                           FontSize="14" Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding City}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                    <Run Text="{Binding City, Mode=OneWay}"/><Run Text=", "/><Run Text="{Binding State, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- Right: Detail / Edit Panel -->
+            <Grid Grid.Column="1">
+
+                <!-- Empty state: nothing selected -->
+                <TextBlock Text="Select a person from the list, or click '+ Add Person' to create a new entry."
+                           Foreground="{DynamicResource TextMutedBrush}" FontSize="15"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedEntry}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsAdding}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- Detail view (selected, not editing) -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding SelectedEntry}" Value="{x:Null}"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedEntry}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsAdding}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <!-- Status Message -->
+                        <Border Background="{DynamicResource SuccessSoftBrush}" Padding="12,8" CornerRadius="6" Margin="0,0,0,16">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StatusMessage}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/>
+                        </Border>
+
+                        <!-- Name + action buttons -->
+                        <Grid Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedEntry.FullName}" FontSize="28" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="{Binding SelectedEntry.Email}" FontSize="13"
+                                           Foreground="{DynamicResource PrimaryBrush}" Margin="0,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedEntry.Email}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                <Button Style="{StaticResource SecondaryButton}" Content="✏ Edit"
+                                        Command="{Binding StartEditCommand}" Padding="12,7" Margin="0,0,8,0"/>
+                                <Button Content="🗑 Delete" Command="{Binding DeleteEntryCommand}"
+                                        Padding="12,7">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                                            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource DangerSoftBrush}"/>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Address Card -->
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="20" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="📍 ADDRESS" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                                <TextBlock Text="{Binding SelectedEntry.AddressLine1}" FontSize="14"
+                                           Foreground="{DynamicResource TextBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedEntry.AddressLine1}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding SelectedEntry.AddressLine2}" FontSize="14"
+                                           Foreground="{DynamicResource TextBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedEntry.AddressLine2}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SelectedEntry.City}" FontSize="14" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text=", " FontSize="14" Foreground="{DynamicResource TextBrush}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedEntry.City}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedEntry.State}" FontSize="14" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text=" " FontSize="14" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="{Binding SelectedEntry.ZipCode}" FontSize="14" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedEntry.Country}" FontSize="14"
+                                           Foreground="{DynamicResource TextBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedEntry.Country}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <!-- No address fallback -->
+                                <TextBlock Text="No address on file." FontSize="13" FontStyle="Italic"
+                                           Foreground="{DynamicResource TextMutedBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding SelectedEntry.AddressLine1}" Value="{x:Null}"/>
+                                                        <Condition Binding="{Binding SelectedEntry.City}" Value="{x:Null}"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Contact Info Card -->
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="20" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="📞 CONTACT" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="Phone: " FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Width="60"/>
+                                    <TextBlock Text="{Binding SelectedEntry.Phone}" FontSize="13" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Email: " FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Width="60"/>
+                                    <TextBlock Text="{Binding SelectedEntry.Email}" FontSize="13" Foreground="{DynamicResource PrimaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Notes Card -->
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="20" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="📝 NOTES" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                                <TextBlock Text="{Binding SelectedEntry.Notes}" FontSize="14"
+                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"
+                                           LineHeight="22"/>
+                                <TextBlock Text="No notes added yet." FontSize="13" FontStyle="Italic"
+                                           Foreground="{DynamicResource TextMutedBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedEntry.Notes}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Meta -->
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0">
+                            <Run Text="Added: "/>
+                            <Run Text="{Binding SelectedEntry.CreatedAt, Mode=OneWay, StringFormat='MMM d, yyyy'}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Edit / Add Form -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsAdding}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <StackPanel>
+
+                        <TextBlock FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,20">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Edit Person"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAdding}" Value="True">
+                                            <Setter Property="Text" Value="Add New Person"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- Error Message -->
+                        <Border Background="{DynamicResource DangerSoftBrush}" Padding="12,8" CornerRadius="6" Margin="0,0,0,16">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource DangerBrush}" FontWeight="SemiBold"/>
+                        </Border>
+
+                        <!-- Name Row -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="First Name *" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditFirstName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Last Name" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditLastName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Address Line 1 -->
+                        <StackPanel Margin="0,0,0,14">
+                            <TextBlock Text="Address Line 1" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditAddressLine1, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                        </StackPanel>
+
+                        <!-- Address Line 2 -->
+                        <StackPanel Margin="0,0,0,14">
+                            <TextBlock Text="Address Line 2" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditAddressLine2, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                        </StackPanel>
+
+                        <!-- City / State / Zip Row -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="City" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditCity, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="State" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditState, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Zip Code" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditZipCode, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Country -->
+                        <StackPanel Margin="0,0,0,14">
+                            <TextBlock Text="Country" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCountry, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                        </StackPanel>
+
+                        <!-- Phone / Email Row -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Phone" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditPhone, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Email" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SearchTextBox}" Padding="10,8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Notes -->
+                        <StackPanel Margin="0,0,0,20">
+                            <TextBlock Text="Notes" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditNotes, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource SearchTextBox}" Padding="10,8"
+                                     Height="100" TextWrapping="Wrap" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"/>
+                        </StackPanel>
+
+                        <!-- Buttons -->
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="💾 Save" Command="{Binding SaveEntryCommand}"
+                                    Padding="18,9" Margin="0,0,10,0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Style="{StaticResource SecondaryButton}" Content="Cancel"
+                                    Command="{Binding CancelEditCommand}" Padding="18,9"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

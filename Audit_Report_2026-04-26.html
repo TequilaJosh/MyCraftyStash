@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>MyCraftyStash - Security &amp; Bug Audit, 2026-04-26</title>
+<style>
+  @page { size: Letter; margin: 0.75in; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #222; line-height: 1.45; font-size: 11pt; }
+  h1 { font-size: 22pt; margin: 0 0 6pt 0; color: #111; }
+  h2 { font-size: 14pt; margin: 18pt 0 6pt 0; color: #111; border-bottom: 1px solid #999; padding-bottom: 3pt; }
+  h3 { font-size: 12pt; margin: 12pt 0 4pt 0; }
+  .meta { color: #555; font-size: 10pt; margin-bottom: 14pt; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0 12pt 0; font-size: 10pt; }
+  th, td { border: 1px solid #999; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  .sev { font-weight: bold; padding: 2pt 6pt; border-radius: 3pt; color: #fff; display: inline-block; min-width: 60pt; text-align: center; }
+  .crit { background: #b00020; }
+  .high { background: #d35400; }
+  .med  { background: #b58900; }
+  .low  { background: #2779aa; }
+  .ok   { background: #2e7d32; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f4f4f4; padding: 1pt 4pt; border-radius: 2pt; font-size: 10pt; }
+  ul { margin: 4pt 0 8pt 18pt; padding: 0; }
+  li { margin-bottom: 3pt; }
+  .finding { border-left: 3pt solid #999; padding: 6pt 10pt; margin: 8pt 0; background: #fafafa; }
+  .finding.crit { border-left-color: #b00020; }
+  .finding.high { border-left-color: #d35400; }
+  .finding.med  { border-left-color: #b58900; }
+  .finding.low  { border-left-color: #2779aa; }
+  .status-fixed { color: #2e7d32; font-weight: bold; }
+  .status-open  { color: #b00020; font-weight: bold; }
+  .status-noop  { color: #555; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>MyCraftyStash - Security &amp; Bug Audit</h1>
+<div class="meta">
+  <strong>Project:</strong> My Crafty Stash (.NET 8 WPF, EF Core, SQL Server)<br/>
+  <strong>Date:</strong> 2026-04-26<br/>
+  <strong>Scope:</strong> Source tree at <code>D:\MyCraftyStash</code> (excluding bin/, obj/, generated XAML)<br/>
+  <strong>Method:</strong> Static review of Services/, ViewModels/, Views/, Data/, Converters/, Models/. Focus areas: SQL injection, path traversal, process execution, async/UI-thread safety, resource lifecycle, hardcoded secrets, logic gaps in the wizard.
+</div>
+
+<h2>Executive Summary</h2>
+<p>
+The application is generally well-structured. EF Core is used everywhere database access happens, so SQL injection risk is minimal. URL launches in the Wishlist view are properly validated (http/https only). Image handling uses <code>BitmapCacheOption.OnLoad</code> in the right places and freezes <code>BitmapImage</code> instances before crossing threads.
+</p>
+<p>
+Fifteen findings are listed below. Five were addressed during this audit pass (one Critical/High pair on credentials and resource lifecycle, plus a defense-in-depth fix on the updater). The remaining items are Medium/Low and tracked here for follow-up.
+</p>
+
+<table>
+  <tr><th>Severity</th><th>Count</th><th>Fixed in this pass</th><th>Remaining</th></tr>
+  <tr><td><span class="sev crit">Critical</span></td><td>1</td><td>1 (mitigated)</td><td>0</td></tr>
+  <tr><td><span class="sev high">High</span></td><td>2</td><td>2</td><td>0</td></tr>
+  <tr><td><span class="sev med">Medium</span></td><td>7</td><td>2</td><td>5</td></tr>
+  <tr><td><span class="sev low">Low</span></td><td>5</td><td>1</td><td>4</td></tr>
+</table>
+
+<h2>1. Critical: Hardcoded SQL credentials in <code>appsettings.json</code></h2>
+<div class="finding crit">
+  <p><strong>File:</strong> <code>appsettings.json</code> (root)</p>
+  <p><strong>Description:</strong> Both connection strings include plaintext passwords (one for the local SQL Server <code>WIN-U5IQ2HISNH3</code>, one for the Azure-hosted catalog DB). If this file is committed to the repository, every developer and the source-control history exposes the credentials. The Azure read-only credential is the lower-risk of the two, but the local-server credential grants write access.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">MITIGATED</span> - added <code>.gitignore</code> entry covering <code>appsettings.json</code>, <code>appsettings.local.json</code>, <code>appsettings.Development.json</code>, plus <code>bin/</code>, <code>obj/</code>, <code>Logs/</code>, <code>.vs/</code>, and <code>*.log</code>. Created <code>appsettings.example.json</code> as a credential-free template developers can copy.</p>
+  <p><strong>Recommended next step:</strong> Rotate the <code>JandH</code> SQL password (and the <code>tebuddy_readonly</code> Azure password) since they may have been committed historically. Consider migrating to <a href="https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets">user-secrets</a> for local dev and Azure Key Vault / environment variables in production.</p>
+</div>
+
+<h2>2. High: <code>CancellationTokenSource</code> leak in CardBuildWizardViewModel</h2>
+<div class="finding high">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> lines 1690-1692, 1848-1850, 1888-1890</p>
+  <p><strong>Description:</strong> Three places in <code>LoadDecorationItems</code>/<code>LoadDecorationStampItems</code> cancel the existing CTS and immediately reassign a new one. The previous CTS is never disposed, so its internal kernel handle and registered callbacks leak each time the user changes the decoration type. With several wizard sessions open in a row and many type-changes per session, this accumulates.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - added <code>cts?.Dispose()</code> immediately after <code>cts?.Cancel()</code> in all three sites.</p>
+</div>
+
+<h2>3. High: No <code>.gitignore</code> in repository</h2>
+<div class="finding high">
+  <p><strong>File:</strong> <code>.gitignore</code> (did not exist)</p>
+  <p><strong>Description:</strong> Without a gitignore, build output (<code>bin/</code>, <code>obj/</code>), VS metadata (<code>.vs/</code>), local logs, and (most critically) <code>appsettings.json</code> were all eligible to be committed.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - new <code>.gitignore</code> covers build output, VS state, logs, all <code>appsettings*.json</code> variants, publish output, <code>*.user</code>, and PDB files.</p>
+</div>
+
+<h2>4. Medium: <code>ObservableCollection</code> mutated from async continuations without dispatcher marshalling</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> (multiple sites in <code>LoadDecorationItems</code>, <code>LoadDecorationStampItems</code>, <code>SearchSentiments</code>, <code>SearchInsideSentiments</code>)</p>
+  <p><strong>Description:</strong> After <code>await</code>, code mutates <code>ObservableCollection</code>s and assigns to <code>[ObservableProperty]</code> backing fields. <em>In practice</em> this works because <code>RelayCommand</code> dispatches via the captured <code>SynchronizationContext</code>, but if any of these paths are ever called from a non-UI thread (e.g., a future background refresh) it will throw <code>InvalidOperationException</code>.</p>
+  <p><strong>Status:</strong> <span class="status-open">OPEN</span></p>
+  <p><strong>Suggested fix:</strong> Either document the UI-thread requirement explicitly, or wrap the mutation in <code>Application.Current.Dispatcher.Invoke(...)</code> defensively in the load methods.</p>
+</div>
+
+<h2>5. Medium: Defense-in-depth path validation for the auto-updater</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>Services/UpdateService.cs</code> <code>ApplyUpdate(...)</code></p>
+  <p><strong>Description:</strong> <code>ApplyUpdate</code> launches the resolved installer with <code>UseShellExecute=true</code>. The path comes from <code>FindInstaller()</code> which scans the configured network share, but a symlink/junction inside that share could resolve to an arbitrary binary. The original code did not enforce that the resolved path stays within the trusted directory.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - added a <code>Path.GetFullPath</code> containment check: the resolved installer must start with the resolved network base path, otherwise <code>ApplyUpdate</code> returns <code>"Installer path resolved outside the trusted installation folder."</code> without launching anything.</p>
+</div>
+
+<h2>6. Medium: Sentiment-part decorations were missing from items-used and project build steps</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> in <code>GetSelectedItemIds</code> and <code>GetCardBuildSteps</code></p>
+  <p><strong>Description:</strong> When configuring an outside sentiment, the user can attach decorations to each part. The decoration's <strong>ink colors</strong> were tracked, but the decoration <strong>item IDs</strong> (and stamp item IDs) were not added to the project's items-used list and did not appear as build steps. Inventory was therefore under-deducted and the project's "items used" view was incomplete.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> in the prior audit step (Step 4) - both <code>AddItem(d.Item.Id)</code> + stamp-item handling were added in the items-used loop, and matching <code>"sentiment_decoration"</code>/<code>"sentiment_decoration_stamp"</code> build steps are emitted.</p>
+</div>
+
+<h2>7. Medium: Adhesive items were never recorded in items-used</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> <code>GetSelectedItemIds</code> + <code>InitializeAsync</code></p>
+  <p><strong>Description:</strong> <code>AdhesiveItems</code> was populated as an <code>ObservableCollection&lt;string&gt;</code> of names only. The chosen adhesive flowed into each mat/focal/sentiment via the name string, but no inventory item ID was ever added to the project's items-used set, even though adhesives are real inventory items.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> in Step 4 - added an <code>_adhesiveIdByName</code> dictionary populated during <code>InitializeAsync</code>, and an <code>AddAdhesives(IEnumerable&lt;string&gt;)</code> helper now feeds the IDs of every adhesive used (BG mats, additional mats, focal parts, sentiments parts, all inside variants) into the items-used result.</p>
+</div>
+
+<h2>8. Medium: Empty <code>catch</code> blocks risk hiding bugs</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>Services/LoggingService.cs</code> (line ~60), several views (Wishlist URL launch, settings save, image-load fallbacks).</p>
+  <p><strong>Description:</strong> Some <code>catch { }</code> blocks intentionally swallow exceptions to keep secondary code paths from killing the app. This is fine in <em>diagnostic</em> code (logging itself), but elsewhere it can hide real failures. <code>LoggingService</code> already escalates to <code>Debug.WriteLine</code>, which is good. Other empty catches should at minimum log to <code>Debug.WriteLine</code>.</p>
+  <p><strong>Status:</strong> <span class="status-open">OPEN</span> - audited <code>LoggingService</code> already does the right thing (verified during this pass). Other sites bear closer review next pass.</p>
+</div>
+
+<h2>9. Medium: <code>SelectedDecorationItemType</code> nullability spread</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> + <code>Views/CardBuildWizardWindow.xaml.cs</code></p>
+  <p><strong>Description:</strong> The property was made nullable (<code>string?</code>) to fix a WPF ComboBox visual glitch. The ViewModel side updates were comprehensive, but a code-behind <code>SelectionChanged</code> handler had unguarded <code>.Contains</code> calls and threw <code>NullReferenceException</code> when the user picked an item with no type selected (logged in <code>ERROR_2026-04-26.log</code> earlier today).</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - <code>DecorationItem_SelectionChanged</code> now uses <code>?.Contains(...) ?? false</code>.</p>
+</div>
+
+<h2>10. Medium: Adhesive picker disappeared after first extra-detail confirm</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> <code>*AdhesiveVisible</code> properties</p>
+  <p><strong>Description:</strong> Every <code>*AdhesiveVisible</code> property included <code>!*ExtraDetailsDone</code>, but <code>*ExtraDetailsDone</code> becomes <code>true</code> as soon as the first decoration is confirmed - permanently hiding the "How was this attached?" picker so the user could never specify the adhesive after adding extras.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - dropped the <code>!*ExtraDetailsDone</code> gate on all eight adhesive-visibility properties.</p>
+</div>
+
+<h2>11. Medium: Inside section button visibility lag after confirm/cancel</h2>
+<div class="finding med">
+  <p><strong>File:</strong> <code>ViewModels/CardBuildWizardViewModel.cs</code> <code>ConfirmCurrentDecoration</code>, <code>CancelDecoration</code>, <code>RemoveMatDecoration</code></p>
+  <p><strong>Description:</strong> Confirm/Cancel decoration only raised <code>OnPropertyChanged</code> for the outside variants (<code>BgMat/AdditionalMat/CardBaseDecorationActive</code>). The inside variants weren't notified, so the "+ Add Extra Details" / "Add Inside Background Mat" / "Cancel" buttons stayed hidden until something else triggered a re-eval.</p>
+  <p><strong>Status:</strong> <span class="status-fixed">FIXED</span> - added <code>InsideBgMatDecorationActive</code>, <code>InsideAdditionalMatDecorationActive</code>, <code>InsideMatDecorationActive</code>, <code>InsideFocalMatDecorationActive</code>, <code>SentimentControlsEnabled</code>, and <code>MatDecorationActive</code> notifications to all three commands.</p>
+</div>
+
+<h2>12. Low: Static color-list reload not lock-protected</h2>
+<div class="finding low">
+  <p><strong>File:</strong> <code>Services/InventoryService.cs</code> (lines ~283-300, <code>ReloadColorOrder</code> / <code>ReloadInspirationColors</code>)</p>
+  <p><strong>Description:</strong> Lazy-loaded static color lists are reloaded by replacing the field reference. Reference assignment is atomic on .NET, but two concurrent reloads could leave one thread reading a partially-loaded list if more than one assignment is involved.</p>
+  <p><strong>Status:</strong> <span class="status-open">OPEN</span></p>
+  <p><strong>Suggested fix:</strong> wrap the reload-and-assign in a <code>lock</code> or use <code>Lazy&lt;T&gt;</code>.</p>
+</div>
+
+<h2>13. Low: Tesseract engine recreated per OCR call</h2>
+<div class="finding low">
+  <p><strong>File:</strong> <code>Services/SentimentService.cs</code> (around line 462)</p>
+  <p><strong>Description:</strong> A new <code>TesseractEngine</code> is constructed and disposed for each OCR pass. That's safe (it's in a <code>using</code>) but expensive. Engine startup loads the trained model from disk every time.</p>
+  <p><strong>Status:</strong> <span class="status-open">OPEN</span></p>
+  <p><strong>Suggested fix:</strong> cache one engine per language at the service level and dispose on app shutdown via <code>App.Exit</code>.</p>
+</div>
+
+<h2>14. Low: <code>ConfigPathService</code>-derived paths read without containment validation</h2>
+<div class="finding low">
+  <p><strong>File:</strong> <code>Services/InventoryService.cs</code> (multiple call sites that <code>File.ReadAllLines(ConfigPathService.X)</code>)</p>
+  <p><strong>Description:</strong> Paths are not user-supplied today, but if <code>ConfigPathService</code> ever exposes a "set custom config folder" feature, a path-traversal vector opens up.</p>
+  <p><strong>Status:</strong> <span class="status-open">OPEN</span> (low - the threat model assumes the config share is trusted today).</p>
+</div>
+
+<h2>15. Low: Wishlist URL launch (intentional, verified)</h2>
+<div class="finding low">
+  <p><strong>File:</strong> <code>Views/WishlistView.xaml.cs</code> lines 17-29</p>
+  <p><strong>Description:</strong> Validates the user-clicked text as an absolute URI, requires the scheme to be exactly <code>http</code> or <code>https</code>, then launches via <code>Process.Start(... UseShellExecute=true)</code>. This is the correct pattern.</p>
+  <p><strong>Status:</strong> <span class="status-noop">VERIFIED OK</span> - no fix needed.</p>
+</div>
+
+<h2>Files Modified During This Audit</h2>
+<ul>
+  <li><code>.gitignore</code> - new file, covers credentials/build/logs.</li>
+  <li><code>appsettings.example.json</code> - new credential-free template.</li>
+  <li><code>ViewModels/CardBuildWizardViewModel.cs</code> - <code>Dispose()</code> on the two <code>CancellationTokenSource</code> fields before reassignment (3 sites).</li>
+  <li><code>Services/UpdateService.cs</code> - path-containment check on the resolved installer.</li>
+</ul>
+
+<p style="margin-top: 16pt; color: #555; font-size: 10pt;">Build status after fixes: <strong>0 errors, 0 new warnings.</strong></p>
+
+</body>
+</html>

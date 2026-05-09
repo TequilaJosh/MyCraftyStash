@@ -1,0 +1,258 @@
+<UserControl x:Class="MyCraftyStash.Views.EnvelopeExpertView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel>
+                <TextBlock Text="Envelope Expert" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                <TextBlock Text="Paper cutting calculator for envelopes &amp; boxes" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Background="{DynamicResource BackgroundBrush}">
+        <StackPanel Margin="32,28,32,32" MaxWidth="560" HorizontalAlignment="Left">
+
+            <!-- Mode Toggle -->
+            <TextBlock Text="MODE"
+                       FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                <RadioButton x:Name="RadioButton_Envelope"
+                             Content="Envelope"
+                             IsChecked="True"
+                             Checked="Mode_Changed"
+                             Margin="0,0,8,0">
+                    <RadioButton.Style>
+                        <Style TargetType="RadioButton">
+                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="RadioButton">
+                                        <Border x:Name="Bd"
+                                                Background="{DynamicResource CardBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="20,8">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </RadioButton.Style>
+                </RadioButton>
+                <RadioButton x:Name="RadioButton_Box"
+                             Content="Box"
+                             IsChecked="False"
+                             Checked="Mode_Changed">
+                    <RadioButton.Style>
+                        <Style TargetType="RadioButton">
+                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="RadioButton">
+                                        <Border x:Name="Bd"
+                                                Background="{DynamicResource CardBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="20,8">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </RadioButton.Style>
+                </RadioButton>
+            </StackPanel>
+
+            <!-- Inputs -->
+            <TextBlock Text="DIMENSIONS (inches)"
+                       FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       Margin="0,0,0,12"/>
+
+            <!-- Width Row -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                <TextBlock x:Name="Label_Width" Text="Width"
+                           FontSize="13" Foreground="{DynamicResource TextBrush}"
+                           VerticalAlignment="Center" Width="90"/>
+                <TextBox x:Name="TextBox_Width"
+                         Width="52" Height="30"
+                         Background="{DynamicResource InputBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         BorderThickness="1" Padding="6,4"
+                         FontSize="13" VerticalContentAlignment="Center"
+                         TextChanged="Input_Changed"
+                         Margin="0,0,8,0"/>
+                <ComboBox x:Name="ComboBox_WidthFraction"
+                          Width="64" Height="30"
+                          SelectionChanged="Input_Changed">
+                    <ComboBoxItem Content="0" IsSelected="True"/>
+                    <ComboBoxItem Content="1/8"/>
+                    <ComboBoxItem Content="1/4"/>
+                    <ComboBoxItem Content="3/8"/>
+                    <ComboBoxItem Content="1/2"/>
+                    <ComboBoxItem Content="5/8"/>
+                    <ComboBoxItem Content="3/4"/>
+                    <ComboBoxItem Content="7/8"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Height Row -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+                <TextBlock x:Name="Label_Height" Text="Height"
+                           FontSize="13" Foreground="{DynamicResource TextBrush}"
+                           VerticalAlignment="Center" Width="90"/>
+                <TextBox x:Name="TextBox_Height"
+                         Width="52" Height="30"
+                         Background="{DynamicResource InputBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         BorderThickness="1" Padding="6,4"
+                         FontSize="13" VerticalContentAlignment="Center"
+                         TextChanged="Input_Changed"
+                         Margin="0,0,8,0"/>
+                <ComboBox x:Name="ComboBox_HeightFraction"
+                          Width="64" Height="30"
+                          SelectionChanged="Input_Changed">
+                    <ComboBoxItem Content="0" IsSelected="True"/>
+                    <ComboBoxItem Content="1/8"/>
+                    <ComboBoxItem Content="1/4"/>
+                    <ComboBoxItem Content="3/8"/>
+                    <ComboBoxItem Content="1/2"/>
+                    <ComboBoxItem Content="5/8"/>
+                    <ComboBoxItem Content="3/4"/>
+                    <ComboBoxItem Content="7/8"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Box Depth Row -->
+            <StackPanel x:Name="Panel_BoxDepth" Orientation="Horizontal" Margin="0,0,0,10"
+                        VerticalAlignment="Center" Visibility="Collapsed">
+                <TextBlock Text="Depth"
+                           FontSize="13" Foreground="{DynamicResource TextBrush}"
+                           VerticalAlignment="Center" Width="90"/>
+                <TextBox x:Name="TextBox_BoxDepth"
+                         Width="52" Height="30"
+                         Background="{DynamicResource InputBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         BorderThickness="1" Padding="6,4"
+                         FontSize="13" VerticalContentAlignment="Center"
+                         TextChanged="Input_Changed"
+                         Margin="0,0,8,0"/>
+                <ComboBox x:Name="ComboBox_BoxDepthFraction"
+                          Width="64" Height="30"
+                          SelectionChanged="Input_Changed">
+                    <ComboBoxItem Content="0" IsSelected="True"/>
+                    <ComboBoxItem Content="1/8"/>
+                    <ComboBoxItem Content="1/4"/>
+                    <ComboBoxItem Content="3/8"/>
+                    <ComboBoxItem Content="1/2"/>
+                    <ComboBoxItem Content="5/8"/>
+                    <ComboBoxItem Content="3/4"/>
+                    <ComboBoxItem Content="7/8"/>
+                </ComboBox>
+            </StackPanel>
+
+            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,12,0,16"/>
+
+            <!-- Results Panel -->
+            <Border x:Name="ResultsPanel"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="RESULTS"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Margin="0,0,0,14"/>
+
+                    <!-- Envelope Results -->
+                    <StackPanel x:Name="EnvelopeResults">
+                        <TextBlock Text="Paper Size Needed"
+                                   FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="Result_PaperSize"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,10"/>
+                        <TextBlock Text="Score Line"
+                                   FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="Result_ScoreLine"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,4"/>
+                    </StackPanel>
+
+                    <!-- Box Results -->
+                    <StackPanel x:Name="BoxResults" Visibility="Collapsed">
+                        <TextBlock Text="Paper Size Needed"
+                                   FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="Result_BoxPaperSize"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,10"/>
+                        <TextBlock Text="First Score Line"
+                                   FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="Result_BoxFirstScore"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,10"/>
+                        <TextBlock Text="Second Score Line"
+                                   FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="Result_BoxSecondScore"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,4"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Error message -->
+            <TextBlock x:Name="ErrorText"
+                       Foreground="{DynamicResource DangerBrush}"
+                       FontSize="12"
+                       Margin="0,8,0,0"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed"/>
+
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
