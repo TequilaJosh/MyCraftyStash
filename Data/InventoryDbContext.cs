@@ -82,6 +82,9 @@ namespace MyCraftyStash.Data
                 entity.Property(e => e.Technique).HasColumnName("technique");
                 entity.Property(e => e.Notes).HasColumnName("notes");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.IsShared).HasColumnName("is_shared");
+                entity.Property(e => e.SharedFromName).HasColumnName("shared_from_name");
+                entity.Property(e => e.SharedAt).HasColumnName("shared_at");
             });
 
             modelBuilder.Entity<ItemImage>(entity =>

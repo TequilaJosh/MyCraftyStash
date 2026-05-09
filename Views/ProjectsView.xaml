@@ -83,6 +83,20 @@
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         FontSize="12" Cursor="Hand"/>
+
+                                <!-- Spacer to push import button to the right -->
+                                <Grid Width="0" HorizontalAlignment="Stretch"/>
+
+                                <!-- Import a .mcsproject file someone shared with you -->
+                                <Button Content="⇪ Import shared…"
+                                        Command="{Binding ImportSharedProjectCommand}"
+                                        Margin="10,0,0,0" Padding="12,6"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource CardBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        Foreground="{DynamicResource TextBrush}"
+                                        FontSize="12" Cursor="Hand"
+                                        ToolTip="Open a .mcsproject file someone sent you and add it to your projects."/>
                             </StackPanel>
 
                             <!-- Row 2: subtype checkboxes (shown when a type is selected and it has subtypes) -->
@@ -141,17 +155,32 @@
                                         Cursor="Hand"
                                         MouseLeftButtonUp="ProjectCard_Click">
                                     <StackPanel>
-                                        <Border MaxHeight="220" CornerRadius="8" Background="{DynamicResource SidebarBrush}" Margin="0,0,0,12">
-                                            <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}, ConverterParameter=300}" Stretch="Uniform"/>
-                                        </Border>
+                                        <Grid>
+                                            <Border MaxHeight="220" CornerRadius="8" Background="{DynamicResource SidebarBrush}" Margin="0,0,0,12">
+                                                <Image Source="{Binding ImageUrl, Converter={StaticResource Base64ImageConverter}, ConverterParameter=300}" Stretch="Uniform"/>
+                                            </Border>
+                                            <!-- Shared badge for projects imported from a .mcsproject file -->
+                                            <Border Background="#5F7A5C" CornerRadius="4" Padding="6,2"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Margin="0,8,8,0"
+                                                    Visibility="{Binding IsShared, Converter={StaticResource BoolToVisConverter}}">
+                                                <TextBlock Text="✦ Shared" FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="White"/>
+                                            </Border>
+                                        </Grid>
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource CardNameFontSize}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock FontSize="11" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Visibility="{Binding IsShared, Converter={StaticResource BoolToVisConverter}}">
+                                            <Run Text="from "/><Run Text="{Binding SharedFromName, Mode=OneWay}"/>
+                                        </TextBlock>
                                         <TextBlock Text="{Binding Description}"
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    FontSize="{DynamicResource CardTypeFontSize}"
                                                    Margin="0,4,0,0"
                                                    TextWrapping="Wrap"/>
-                                        <TextBlock Foreground="{DynamicResource PrimaryBrush}" 
-                                                   FontSize="{DynamicResource CardTypeFontSize}" 
+                                        <TextBlock Foreground="{DynamicResource PrimaryBrush}"
+                                                   FontSize="{DynamicResource CardTypeFontSize}"
                                                    Margin="0,8,0,0">
                                             <Run Text="{Binding ProjectItems.Count, Mode=OneWay}"/>
                                             <Run Text=" items used"/>
@@ -185,12 +214,18 @@
                                         Visibility="{Binding IsAddingCreation, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"
                                         Margin="0,0,12,0"
                                         Background="{DynamicResource AccentBrush}"/>
-                                <Button Style="{StaticResource PrimaryButton}" 
-                                        Content="Edit Project" 
+                                <Button Style="{StaticResource PrimaryButton}"
+                                        Content="Edit Project"
                                         Command="{Binding StartEditProjectCommand}"
                                         Margin="0,0,12,0"/>
-                                <Button Style="{StaticResource SecondaryButton}" 
-                                        Content="Delete" 
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Content="✉ Share"
+                                        Command="{Binding ShareProjectCommand}"
+                                        CommandParameter="{Binding SelectedProject}"
+                                        Margin="0,0,12,0"
+                                        ToolTip="Save this project as a .mcsproject file and email it to a friend in your address book."/>
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Content="Delete"
                                         Foreground="{DynamicResource DangerBrush}"
                                         Command="{Binding DeleteProjectCommand}"
                                         CommandParameter="{Binding SelectedProject}"/>

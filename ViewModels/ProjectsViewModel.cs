@@ -692,6 +692,98 @@ namespace MyCraftyStash.ViewModels
             finally { IsLoading = false; }
         }
 
+        // ── Project sharing ──────────────────────────────────────────────────
+
+        [RelayCommand]
+        private async Task ShareProject(Project? project)
+        {
+            project ??= SelectedProject;
+            if (project == null) return;
+
+            try
+            {
+                IsLoading = true;
+                var shareSvc  = new ProjectShareService(() => new Data.InventoryDbContext());
+                var addrSvc   = new AddressBookService();
+                var contacts  = await addrSvc.GetAllEntriesAsync();
+
+                var dialog = new ShareProjectDialog(contacts)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow,
+                };
+                if (dialog.ShowDialog() != true) return;
+
+                var path = await shareSvc.ExportAsync(project.Id, exportedByName: Environment.UserName);
+
+                if (dialog.OpenInExplorer)
+                {
+                    try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\""); } catch { }
+                }
+
+                if (dialog.ShouldSendEmail && !string.IsNullOrWhiteSpace(dialog.SelectedEmail))
+                {
+                    var subject = Uri.EscapeDataString($"My Crafty Stash project: {project.Name}");
+                    var body = Uri.EscapeDataString(
+                        $"I'd like to share my My Crafty Stash project \"{project.Name}\" with you.{Environment.NewLine}{Environment.NewLine}" +
+                        $"Attach the file at: {path}{Environment.NewLine}{Environment.NewLine}" +
+                        "Open it from inside My Crafty Stash via Projects → Import to add it to your list.");
+                    var mailto = $"mailto:{dialog.SelectedEmail}?subject={subject}&body={body}";
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(mailto) { UseShellExecute = true }); }
+                    catch (Exception ex) { LoggingService.LogError(ex, "ProjectsViewModel.ShareProject mailto launch"); }
+                }
+
+                MessageBox.Show(
+                    $"Saved to:{Environment.NewLine}{path}{Environment.NewLine}{Environment.NewLine}" +
+                    "Attach this file to the email your mail client just opened.",
+                    "Project shared", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Couldn't share project: {ex.Message}";
+                LoggingService.LogError(ex, "ProjectsViewModel.ShareProject");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task ImportSharedProject()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Open shared project",
+                Filter = "My Crafty Stash project (*.mcsproject)|*.mcsproject|All files (*.*)|*.*",
+                CheckFileExists = true,
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                IsLoading = true;
+                var importSvc = new ProjectImportService(() => new Data.InventoryDbContext());
+                var result = await importSvc.ImportAsync(dlg.FileName);
+                await LoadProjects();
+                MessageBox.Show(
+                    $"Imported \"{result.ProjectName}\".{Environment.NewLine}{Environment.NewLine}" +
+                    $"Items linked from your inventory: {result.ItemsLinked}{Environment.NewLine}" +
+                    $"Items skipped (not in your inventory): {result.ItemsSkipped}{Environment.NewLine}" +
+                    $"Images imported: {result.ImagesImported}{Environment.NewLine}" +
+                    $"Card builds imported: {result.CardBuildsImported}",
+                    "Project imported", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Couldn't import project: {ex.Message}";
+                LoggingService.LogError(ex, "ProjectsViewModel.ImportSharedProject");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
         // ---- "I Made One" ----
 
         [RelayCommand]
