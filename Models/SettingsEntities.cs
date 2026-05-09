@@ -56,4 +56,24 @@ namespace MyCraftyStash.Models
         /// <summary>Free-form notes — e.g. "Retired", "Closest match", confidence.</summary>
         public string? Notes { get; set; }
     }
+
+    /// <summary>
+    /// Cached event scraped from the Taylored Expressions Square Online site.
+    /// Refreshed on app launch in the background; the calendar overlays
+    /// these on top of the user's personal events with a distinct color.
+    /// EventDate is a DateOnly stored as ISO-8601 TEXT (yyyy-MM-dd).
+    /// </summary>
+    public class TeEventCache
+    {
+        public int Id { get; set; }
+        /// <summary>Stable identifier from the source page (URL slug or hash).
+        /// Used to upsert without duplicating across refreshes.</summary>
+        public string ExternalId { get; set; } = string.Empty;
+        public DateTime EventDate { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Url { get; set; }
+        public string? ImageUrl { get; set; }
+        public DateTime FetchedAt { get; set; }
+    }
 }

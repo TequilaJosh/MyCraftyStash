@@ -9,6 +9,7 @@ namespace MyCraftyStash.ViewModels
     public partial class CalendarViewModel : BaseViewModel
     {
         private readonly CalendarService _service;
+        private readonly TeEventScraperService _teEvents = new();
         // FIX #11: Removed unused _mainVm field - was preventing GC of MainViewModel reference
         private List<CalendarEvent> _monthEvents = new();
 
@@ -99,8 +100,29 @@ namespace MyCraftyStash.ViewModels
                 IsLoading = true;
                 ErrorMessage = null;
                 _monthEvents = await _service.GetEventsForMonthAsync(CurrentYear, CurrentMonth);
+
+                // Overlay TE events scraped from the Square site. Read-only,
+                // distinct color, badge in the day cell. Cache is kept fresh
+                // by the background refresh kicked off at app start.
+                var firstOfMonth = new DateTime(CurrentYear, CurrentMonth, 1);
+                var lastOfMonth = firstOfMonth.AddMonths(1).AddDays(-1);
+                var teEvents = _teEvents.GetCached(firstOfMonth, lastOfMonth);
+                foreach (var te in teEvents)
+                {
+                    _monthEvents.Add(new CalendarEvent
+                    {
+                        Id          = -te.Id, // negative so it can never collide with a real event id
+                        Title       = te.Title,
+                        Description = te.Description,
+                        EventDate   = te.EventDate,
+                        IsAllDay    = true,
+                        Color       = "#5F7A5C", // cozy-emblem green
+                        IsFromTe    = true,
+                        TeUrl       = te.Url,
+                    });
+                }
+
                 BuildCalendarGrid();
-                // Re-select same day if still valid
                 if (SelectedDay != null)
                 {
                     var cell = DayCells.FirstOrDefault(c => c.Date == SelectedDay.Date);
@@ -181,6 +203,12 @@ namespace MyCraftyStash.ViewModels
         {
             if (evt != null) SelectedEvent = evt;
             if (SelectedEvent == null) return;
+            // TE-sourced events are read-only mirrors of the scraped cache.
+            if (SelectedEvent.IsFromTe)
+            {
+                SetStatusMessage("Taylored Expressions events are read-only.");
+                return;
+            }
             IsEditing = true;
             IsAdding = false;
             PopulateForm(SelectedEvent);
@@ -273,6 +301,11 @@ namespace MyCraftyStash.ViewModels
         {
             var target = evt ?? SelectedEvent;
             if (target == null) return;
+            if (target.IsFromTe)
+            {
+                SetStatusMessage("Taylored Expressions events are read-only.");
+                return;
+            }
             try
             {
                 IsLoading = true;

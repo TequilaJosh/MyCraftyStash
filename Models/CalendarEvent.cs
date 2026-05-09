@@ -57,5 +57,14 @@ namespace MyCraftyStash.Models
                 return DateTime.Now >= reminderTime && EventDateTime >= DateTime.Now.Date;
             }
         }
+
+        // ── Overlay fields for TE-sourced events ────────────────────────────
+        // TE events live in a separate cache table but are merged into the
+        // calendar render layer as read-only CalendarEvent instances flagged
+        // here. The view binds these to colour/icon/badge differently and
+        // disables the edit/delete commands when IsFromTe is true.
+
+        [NotMapped] public bool IsFromTe { get; set; }
+        [NotMapped] public string? TeUrl { get; set; }
     }
 }

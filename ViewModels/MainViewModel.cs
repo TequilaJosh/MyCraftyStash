@@ -50,6 +50,11 @@ namespace MyCraftyStash.ViewModels
             // Ensure wishlist table exists on startup
             _ = _wishlistService.EnsureTableAsync();
 
+            // Kick off TE event scraping in the background. Failures are
+            // logged but never block startup; the calendar overlay just
+            // shows the previous cache.
+            _ = new TeEventScraperService().RefreshIfStaleAsync();
+
             CurrentView = HomeVM;
             _ = HomeVM.LoadAsync();
         }

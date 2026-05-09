@@ -16,6 +16,7 @@ namespace MyCraftyStash.Data
         public DbSet<CustomColor> CustomColors { get; set; }
         public DbSet<ConfigList> ConfigLists { get; set; }
         public DbSet<ColorMatch> ColorMatches { get; set; }
+        public DbSet<TeEventCache> TeEventsCache { get; set; }
 
         public SettingsDbContext() { }
 
@@ -79,6 +80,22 @@ namespace MyCraftyStash.Data
                 // Look-ups are always (system, code) so index them together.
                 e.HasIndex(x => new { x.System, x.ExternalCode }).IsUnique();
                 e.HasIndex(x => new { x.System, x.TeColorName });
+            });
+
+            modelBuilder.Entity<TeEventCache>(e =>
+            {
+                e.ToTable("te_events_cache");
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).HasColumnName("id");
+                e.Property(x => x.ExternalId).HasColumnName("external_id");
+                e.Property(x => x.EventDate).HasColumnName("event_date");
+                e.Property(x => x.Title).HasColumnName("title");
+                e.Property(x => x.Description).HasColumnName("description");
+                e.Property(x => x.Url).HasColumnName("url");
+                e.Property(x => x.ImageUrl).HasColumnName("image_url");
+                e.Property(x => x.FetchedAt).HasColumnName("fetched_at");
+                e.HasIndex(x => x.ExternalId).IsUnique();
+                e.HasIndex(x => x.EventDate);
             });
         }
     }
