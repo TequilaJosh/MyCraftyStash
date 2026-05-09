@@ -15,6 +15,7 @@ namespace MyCraftyStash.Data
         public DbSet<TypeSortOrderEntry> TypeSortOrders { get; set; }
         public DbSet<CustomColor> CustomColors { get; set; }
         public DbSet<ConfigList> ConfigLists { get; set; }
+        public DbSet<ColorMatch> ColorMatches { get; set; }
 
         public SettingsDbContext() { }
 
@@ -62,6 +63,22 @@ namespace MyCraftyStash.Data
                 e.HasKey(x => x.Name);
                 e.Property(x => x.Name).HasColumnName("name");
                 e.Property(x => x.Content).HasColumnName("content");
+            });
+
+            modelBuilder.Entity<ColorMatch>(e =>
+            {
+                e.ToTable("color_matches");
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).HasColumnName("id");
+                e.Property(x => x.System).HasColumnName("system");
+                e.Property(x => x.ExternalCode).HasColumnName("external_code");
+                e.Property(x => x.TeColorName).HasColumnName("te_color_name");
+                e.Property(x => x.ExternalHex).HasColumnName("external_hex");
+                e.Property(x => x.TeColorHex).HasColumnName("te_color_hex");
+                e.Property(x => x.Notes).HasColumnName("notes");
+                // Look-ups are always (system, code) so index them together.
+                e.HasIndex(x => new { x.System, x.ExternalCode }).IsUnique();
+                e.HasIndex(x => new { x.System, x.TeColorName });
             });
         }
     }

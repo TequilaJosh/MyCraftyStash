@@ -55,6 +55,9 @@
             <DataTemplate DataType="{x:Type vm:SocialViewModel}">
                 <views:SocialView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ColorMatchViewModel}">
+                <views:ColorMatchView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:WishlistViewModel}">
                 <views:WishlistView />
             </DataTemplate>

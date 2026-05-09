@@ -23,6 +23,7 @@ namespace MyCraftyStash.ViewModels
         public SentimentSearchViewModel SentimentSearchVM { get; }
         public StockTrackingViewModel  StockTrackingVM  { get; }
         public SocialViewModel         SocialVM         { get; }
+        public ColorMatchViewModel     ColorMatchVM     { get; }
         public WishlistViewModel       WishlistVM       { get; }
         public PurchaseReportViewModel PurchaseReportVM { get; }
         public MyCraftyStash.Views.EnvelopeExpertView EnvelopeExpertView { get; private set; }
@@ -41,6 +42,7 @@ namespace MyCraftyStash.ViewModels
             SentimentSearchVM = new SentimentSearchViewModel(_service, this);
             StockTrackingVM  = new StockTrackingViewModel(_service, this);
             SocialVM         = new SocialViewModel(this);
+            ColorMatchVM     = new ColorMatchViewModel();
             WishlistVM       = new WishlistViewModel(_wishlistService, _service, this);
             PurchaseReportVM = new PurchaseReportViewModel(_reportService, _exportService);
             EnvelopeExpertView = new MyCraftyStash.Views.EnvelopeExpertView();
@@ -83,6 +85,14 @@ namespace MyCraftyStash.ViewModels
             CurrentPage = "Social";
             CurrentView = SocialVM;
             await SocialVM.LoadAllAsync();
+        }
+
+        [RelayCommand]
+        private void NavigateToColorMatch()
+        {
+            CurrentPage = "ColorMatch";
+            CurrentView = ColorMatchVM;
+            ColorMatchVM.Load();
         }
 
         [RelayCommand]

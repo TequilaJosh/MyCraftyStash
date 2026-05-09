@@ -33,4 +33,27 @@ namespace MyCraftyStash.Models
         public string Name { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// One row per (external system + external code) -> TE color mapping.
+    /// Most are 1:1 (one DMC# -> one TE color) but a few are many-to-1
+    /// (multiple OLO codes match the same TE color), so the table is keyed
+    /// on (system, external_code) rather than on TE color name.
+    /// </summary>
+    public class ColorMatch
+    {
+        public int Id { get; set; }
+        /// <summary>Source system identifier: "DMC", "OLO", future "Copic", etc.</summary>
+        public string System { get; set; } = string.Empty;
+        /// <summary>External code from the source system (e.g. DMC "225", OLO "R0.1").</summary>
+        public string ExternalCode { get; set; } = string.Empty;
+        /// <summary>TE color name this external code matches (e.g. "Rose Water").</summary>
+        public string TeColorName { get; set; } = string.Empty;
+        /// <summary>Optional hex swatch for the external color (e.g. DMC fiber #).</summary>
+        public string? ExternalHex { get; set; }
+        /// <summary>Optional hex swatch for the TE color (mirrors inventory if known).</summary>
+        public string? TeColorHex { get; set; }
+        /// <summary>Free-form notes — e.g. "Retired", "Closest match", confidence.</summary>
+        public string? Notes { get; set; }
+    }
 }
