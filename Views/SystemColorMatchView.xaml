@@ -77,13 +77,41 @@
                     Command="{Binding RefreshCommand}"
                     ToolTip="Re-check inventory and refresh ownership status."
                     Content="↻ Refresh"/>
+
+            <Button Margin="6,0,0,0" Padding="10,6" Cursor="Hand"
+                    Background="Transparent"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    Command="{Binding ReseedCommand}"
+                    ToolTip="Wipe this system's mappings and reload them from the built-in defaults. Use only if the table is stuck empty or corrupt."
+                    Content="⟳ Re-seed defaults"/>
         </StackPanel>
 
         <!-- Match table -->
         <Border Grid.Row="2" Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 CornerRadius="8">
-            <DataGrid ItemsSource="{Binding Filtered}"
+            <Grid>
+                <!-- Empty-state diagnostic. Sits behind the DataGrid so it
+                     only shows through when the grid has zero rows. -->
+                <Border Background="#FFFFF4D6" BorderBrush="#FFE0B341"
+                        BorderThickness="1" CornerRadius="6"
+                        Margin="20" Padding="16,14"
+                        VerticalAlignment="Top"
+                        Visibility="{Binding ShowDiagnostic, Converter={StaticResource BoolToVisConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="No mappings to show" FontWeight="SemiBold" FontSize="13"
+                                   Foreground="#FF8A5A00" Margin="0,0,0,4"/>
+                        <TextBlock Text="If the All filter is empty too, the seed didn't land. Try ↻ Refresh first; if that doesn't help, ⟳ Re-seed defaults wipes this system and re-imports the built-in mappings."
+                                   FontSize="12" TextWrapping="Wrap" Foreground="#FF6B4500"/>
+                        <TextBlock Margin="0,8,0,0" FontSize="11" FontFamily="Consolas"
+                                   TextWrapping="Wrap"
+                                   Foreground="#FF6B4500"
+                                   Text="{Binding DiagnosticText}"/>
+                    </StackPanel>
+                </Border>
+
+                <DataGrid ItemsSource="{Binding Filtered}"
                       SelectedItem="{Binding Selected, Mode=TwoWay}"
                       AutoGenerateColumns="False"
                       HeadersVisibility="Column"
@@ -170,6 +198,7 @@
                     </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

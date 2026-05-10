@@ -128,6 +128,11 @@ namespace MyCraftyStash.ViewModels
             ? string.Empty
             : $"You own {OwnedCount} of {TotalCount} colors ({(int)Math.Round(100.0 * OwnedCount / TotalCount)}%)";
 
+        // Diagnostic info shown in the empty state so we can tell whether
+        // the DB is genuinely empty or the filter is hiding everything.
+        [ObservableProperty] private string _diagnosticText = string.Empty;
+        public bool ShowDiagnostic => Filtered.Count == 0;
+
         public SystemColorMatchViewModel(ColorMatchService service, string system, string displayName)
         {
             _service = service;
@@ -171,6 +176,7 @@ namespace MyCraftyStash.ViewModels
             TotalCount = distinct.Count;
             OwnedCount = distinct.Count(o => o);
 
+            DiagnosticText = $"Loaded {_all.Count} {System} mappings from {AppPaths.SettingsDbPath}";
             ApplyFilter();
         }
 
@@ -196,11 +202,34 @@ namespace MyCraftyStash.ViewModels
             }
             foreach (var r in rows.OrderBy(r => r.TeColorName).ThenBy(r => r.ExternalCode))
                 Filtered.Add(r);
+            OnPropertyChanged(nameof(ShowDiagnostic));
         }
 
         [RelayCommand] private void Refresh() => Reload();
         [RelayCommand] private void FilterAll()     => Filter = FilterMode.All;
         [RelayCommand] private void FilterOwned()   => Filter = FilterMode.Owned;
         [RelayCommand] private void FilterMissing() => Filter = FilterMode.Missing;
+
+        /// <summary>
+        /// Wipes the current system's rows and re-runs the seed from the
+        /// hardcoded defaults. Escape hatch for when the table got into a
+        /// weird state.
+        /// </summary>
+        [RelayCommand]
+        private void Reseed()
+        {
+            try
+            {
+                _service.WipeSystem(System);
+                _service.ForceReseed();
+                Reload();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"SystemColorMatchViewModel.Reseed({System})");
+                DiagnosticText = $"Re-seed failed: {ex.Message}";
+                OnPropertyChanged(nameof(ShowDiagnostic));
+            }
+        }
     }
 }

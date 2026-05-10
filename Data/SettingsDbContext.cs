@@ -77,8 +77,13 @@ namespace MyCraftyStash.Data
                 e.Property(x => x.ExternalHex).HasColumnName("external_hex");
                 e.Property(x => x.TeColorHex).HasColumnName("te_color_hex");
                 e.Property(x => x.Notes).HasColumnName("notes");
-                // Look-ups are always (system, code) so index them together.
-                e.HasIndex(x => new { x.System, x.ExternalCode }).IsUnique();
+                // Many-to-1 mappings are legal (e.g. both "Confetti Cake" and
+                // "Sprinkles" match DMC 598), so the unique key has to include
+                // the TE color name too — uniqueness means "this exact mapping
+                // row is the only one", not "this code is taken".
+                e.HasIndex(x => new { x.System, x.ExternalCode, x.TeColorName }).IsUnique();
+                // Non-unique helper indexes for the two common lookup paths.
+                e.HasIndex(x => new { x.System, x.ExternalCode });
                 e.HasIndex(x => new { x.System, x.TeColorName });
             });
 
