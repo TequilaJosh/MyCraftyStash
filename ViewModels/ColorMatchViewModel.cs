@@ -39,13 +39,29 @@ namespace MyCraftyStash.ViewModels
 
     /// <summary>
     /// Per-system color-match row that wraps a stored <see cref="ColorMatch"/>
-    /// with the user-facing IsOwned flag (computed against inventory) and
-    /// the action tooltip shown on hover.
+    /// with two ownership signals — whether the user owns the matching
+    /// Taylored Expressions color (TE-side) and whether they own the
+    /// matching DMC floss / OLO marker (external-side). The tooltip and
+    /// the row colour change based on both signals.
     /// </summary>
     public class ColorMatchRow
     {
         public ColorMatch Match { get; init; } = new();
-        public bool IsOwned { get; init; }
+
+        /// <summary>True when the user has the TE color (ink, cardstock,
+        /// envelope, etc.) matching this row's TeColorName.</summary>
+        public bool IsOwnedTe { get; init; }
+
+        /// <summary>True when the user has a DMC/OLO supply item whose
+        /// ItemNumber or Name contains this row's ExternalCode.</summary>
+        public bool IsOwnedExternal { get; init; }
+
+        // Combined: rows you can act on (cross-stitch, color-with-marker,
+        // etc.) need BOTH sides — that's "ready". Anything missing is
+        // either "owned the TE color, need to order the supply" or vice
+        // versa. Filter chips key off these.
+        public bool IsFullyReady => IsOwnedTe && IsOwnedExternal;
+        public bool IsAnyOwned   => IsOwnedTe || IsOwnedExternal;
 
         // Direct property surface so XAML bindings don't have to dot through
         // .Match. Read-only — edits go through the service.
@@ -54,27 +70,33 @@ namespace MyCraftyStash.ViewModels
         public string? Notes       => Match.Notes;
         public string  System      => Match.System;
 
-        /// <summary>Glyph for the Owned column. ✓ when in inventory, ○ otherwise.</summary>
-        public string OwnedGlyph => IsOwned ? "✓" : "○";
+        /// <summary>TE-side glyph for the column header.</summary>
+        public string TeGlyph => IsOwnedTe ? "✓" : "○";
+        /// <summary>External-side glyph for the column header.</summary>
+        public string ExternalGlyph => IsOwnedExternal ? "✓" : "○";
 
-        /// <summary>Tooltip rendered on row hover. Reads e.g. "Order DMC 902
-        /// to match Mulled Wine — already in your inventory."</summary>
+        /// <summary>Tooltip rendered on row hover. Branches on which sides
+        /// the user already has so the message is always actionable.</summary>
         public string HoverHint
         {
             get
             {
                 var systemLabel = Match.System switch
                 {
-                    "DMC" => "DMC floss",
-                    "OLO" => "OLO marker",
-                    _     => Match.System,
+                    "DMC" => $"DMC floss {ExternalCode}",
+                    "OLO" => $"OLO marker {ExternalCode}",
+                    _     => $"{Match.System} {ExternalCode}",
                 };
-                var head = IsOwned
-                    ? $"You own {TeColorName}."
-                    : $"Missing from your stash: {TeColorName}.";
-                var order = $"Order {systemLabel} {ExternalCode} to match {TeColorName}.";
-                if (!string.IsNullOrWhiteSpace(Notes)) order += $" ({Notes})";
-                return head + global::System.Environment.NewLine + order;
+                var nl = global::System.Environment.NewLine;
+                string body = (IsOwnedTe, IsOwnedExternal) switch
+                {
+                    (true,  true)  => $"You own both {TeColorName} and {systemLabel}." + nl + "Set — no need to order anything.",
+                    (true,  false) => $"You own {TeColorName} but not {systemLabel}." + nl + $"Order {systemLabel} to match {TeColorName}.",
+                    (false, true)  => $"You own {systemLabel} but not {TeColorName}." + nl + $"Get {TeColorName} to use this {Match.System.ToLowerInvariant()} on TE projects.",
+                    (false, false) => $"Missing both {TeColorName} and {systemLabel}." + nl + $"Order both to use this match.",
+                };
+                if (!string.IsNullOrWhiteSpace(Notes)) body += nl + $"Notes: {Notes}";
+                return body;
             }
         }
     }
@@ -124,9 +146,18 @@ namespace MyCraftyStash.ViewModels
         // Summary stats for the header.
         [ObservableProperty] private int _ownedCount;
         [ObservableProperty] private int _totalCount;
-        public string SummaryText => TotalCount == 0
-            ? string.Empty
-            : $"You own {OwnedCount} of {TotalCount} colors ({(int)Math.Round(100.0 * OwnedCount / TotalCount)}%)";
+        [ObservableProperty] private int _externalOwnedCount;
+
+        public string SummaryText
+        {
+            get
+            {
+                if (TotalCount == 0) return string.Empty;
+                var systemLabel = System switch { "DMC" => "DMC", "OLO" => "OLO", _ => System };
+                var pct = (int)Math.Round(100.0 * OwnedCount / TotalCount);
+                return $"You own {OwnedCount} of {TotalCount} TE colors ({pct}%) · {ExternalOwnedCount} matching {systemLabel} supplies in your inventory";
+            }
+        }
 
         // Diagnostic info shown in the empty state so we can tell whether
         // the DB is genuinely empty or the filter is hiding everything.
@@ -151,6 +182,7 @@ namespace MyCraftyStash.ViewModels
 
         partial void OnOwnedCountChanged(int value) => OnPropertyChanged(nameof(SummaryText));
         partial void OnTotalCountChanged(int value) => OnPropertyChanged(nameof(SummaryText));
+        partial void OnExternalOwnedCountChanged(int value) => OnPropertyChanged(nameof(SummaryText));
 
         public void Reload()
         {
@@ -159,11 +191,21 @@ namespace MyCraftyStash.ViewModels
             // succeeded, so this is cheap on the happy path.
             _service.EnsureSeeded();
             var matches = _service.GetAll(System);
-            var owned = _service.GetOwnedTeColorNames();
+            var ownedTe = _service.GetOwnedTeColorNames();
+            var ownedExternalStrings = _service.GetOwnedExternalCodeStrings(System);
+
+            bool ExternalOwned(string code)
+            {
+                if (string.IsNullOrWhiteSpace(code)) return false;
+                return ownedExternalStrings.Any(s =>
+                    s.Contains(code, StringComparison.OrdinalIgnoreCase));
+            }
+
             _all = matches.Select(m => new ColorMatchRow
             {
-                Match   = m,
-                IsOwned = owned.Contains(m.TeColorName),
+                Match           = m,
+                IsOwnedTe       = ownedTe.Contains(m.TeColorName),
+                IsOwnedExternal = ExternalOwned(m.ExternalCode),
             }).ToList();
 
             // Distinct TE color names — the owned percentage should reflect
@@ -171,10 +213,11 @@ namespace MyCraftyStash.ViewModels
             // matching codes).
             var distinct = _all
                 .GroupBy(r => r.TeColorName, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.Any(r => r.IsOwned))
+                .Select(g => g.Any(r => r.IsOwnedTe))
                 .ToList();
             TotalCount = distinct.Count;
             OwnedCount = distinct.Count(o => o);
+            ExternalOwnedCount = _all.Count(r => r.IsOwnedExternal);
 
             DiagnosticText = $"Loaded {_all.Count} {System} mappings from {AppPaths.SettingsDbPath}";
             ApplyFilter();
@@ -188,8 +231,8 @@ namespace MyCraftyStash.ViewModels
 
             rows = Filter switch
             {
-                FilterMode.Owned   => rows.Where(r => r.IsOwned),
-                FilterMode.Missing => rows.Where(r => !r.IsOwned),
+                FilterMode.Owned   => rows.Where(r => r.IsOwnedTe),
+                FilterMode.Missing => rows.Where(r => !r.IsOwnedTe),
                 _ => rows,
             };
 

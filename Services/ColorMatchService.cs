@@ -63,6 +63,47 @@ namespace MyCraftyStash.Services
             return owned;
         }
 
+        /// <summary>
+        /// External-system codes the user owns supplies for. For OLO this is
+        /// any item whose Type contains "OLO"; for DMC, any Type or Name
+        /// containing "DMC". A chart row is then "external-owned" when its
+        /// ExternalCode appears as a substring of any owned ItemNumber or
+        /// Name (so "B-RV1.3" matches a chart row keyed on "RV1.3").
+        /// </summary>
+        public List<string> GetOwnedExternalCodeStrings(string system)
+        {
+            var owned = new List<string>();
+            try
+            {
+                using var ctx = new IDb();
+                var rows = ctx.Items.AsNoTracking()
+                    .Select(i => new { i.Type, i.Name, i.ItemNumber })
+                    .ToList();
+                foreach (var r in rows)
+                {
+                    var t = r.Type ?? string.Empty;
+                    var n = r.Name ?? string.Empty;
+                    var num = r.ItemNumber ?? string.Empty;
+                    bool relevant = system switch
+                    {
+                        SystemOlo => t.Contains("OLO", StringComparison.OrdinalIgnoreCase)
+                                  || n.Contains("OLO", StringComparison.OrdinalIgnoreCase),
+                        SystemDmc => t.Contains("DMC", StringComparison.OrdinalIgnoreCase)
+                                  || n.Contains("DMC", StringComparison.OrdinalIgnoreCase),
+                        _ => false,
+                    };
+                    if (!relevant) continue;
+                    if (!string.IsNullOrWhiteSpace(num)) owned.Add(num.Trim());
+                    if (!string.IsNullOrWhiteSpace(n))   owned.Add(n.Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"ColorMatchService.GetOwnedExternalCodeStrings({system})");
+            }
+            return owned;
+        }
+
         public List<ColorMatch> GetAll(string system)
         {
             try

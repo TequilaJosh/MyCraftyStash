@@ -126,18 +126,25 @@
                       BorderThickness="0"
                       Foreground="{DynamicResource TextBrush}"
                       HorizontalGridLinesBrush="{DynamicResource BorderBrush}">
-                <!-- Per-row hover tooltip: "Order DMC 902 to match Mulled Wine." -->
+                <!-- Per-row hover tooltip — branches on which sides the user owns. -->
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="ToolTip" Value="{Binding HoverHint}"/>
                         <Setter Property="ToolTipService.InitialShowDelay" Value="350"/>
                         <Setter Property="ToolTipService.ShowDuration" Value="8000"/>
                         <Style.Triggers>
-                            <!-- Owned rows get a subtle green tint so the
-                                 page reads as a quick visual completeness map. -->
-                            <DataTrigger Binding="{Binding IsOwned}" Value="True">
-                                <Setter Property="Background" Value="#225F7A5C"/>
+                            <!-- Both sides owned = strong green tint (you're set). -->
+                            <DataTrigger Binding="{Binding IsFullyReady}" Value="True">
+                                <Setter Property="Background" Value="#335F7A5C"/>
                             </DataTrigger>
+                            <!-- Only one side owned = soft amber tint (one to order). -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsAnyOwned}" Value="True"/>
+                                    <Condition Binding="{Binding IsFullyReady}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Background" Value="#22E0B341"/>
+                            </MultiDataTrigger>
                         </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
@@ -152,7 +159,12 @@
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Owned" Binding="{Binding OwnedGlyph}" Width="64">
+                    <DataGridTextColumn Header="TE" Binding="{Binding TeGlyph}" Width="48">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                <Setter Property="ToolTip" Value="Do you own the matching Taylored Expressions colour (ink, cardstock, envelope, watercolor)?"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
@@ -161,7 +173,28 @@
                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOwned}" Value="True">
+                                    <DataTrigger Binding="{Binding IsOwnedTe}" Value="True">
+                                        <Setter Property="Foreground" Value="#5F7A5C"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Supply" Binding="{Binding ExternalGlyph}" Width="68">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                <Setter Property="ToolTip" Value="Do you own the matching DMC floss / OLO marker for this code? (Detected from inventory items whose type or name mentions DMC/OLO and whose ItemNumber or Name contains the code.)"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontSize" Value="14"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOwnedExternal}" Value="True">
                                         <Setter Property="Foreground" Value="#5F7A5C"/>
                                     </DataTrigger>
                                 </Style.Triggers>

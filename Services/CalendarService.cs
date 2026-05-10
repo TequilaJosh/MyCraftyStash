@@ -33,11 +33,17 @@ namespace MyCraftyStash.Services
                 var firstDayNextMonth = firstDay.AddMonths(1);
 
                 using var ctx = new InventoryDbContext();
-                return await ctx.CalendarEvents
+                // SQLite can't translate ORDER BY on TimeSpan (it's stored as
+                // TEXT, no native ordering), so sort by date in SQL and then
+                // by time in memory after the rows are materialised.
+                var rows = await ctx.CalendarEvents
                     .Where(e => e.EventDate >= firstDay && e.EventDate < firstDayNextMonth)
                     .OrderBy(e => e.EventDate)
-                    .ThenBy(e => e.EventTime)
                     .ToListAsync();
+                return rows
+                    .OrderBy(e => e.EventDate)
+                    .ThenBy(e => e.EventTime ?? TimeSpan.Zero)
+                    .ToList();
             }
             catch (Exception ex)
             {
