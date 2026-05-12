@@ -110,7 +110,7 @@
                       GridLinesVisibility="Horizontal"
                       CanUserAddRows="False"
                       CanUserDeleteRows="False"
-                      IsReadOnly="True"
+                      IsReadOnly="False"
                       RowHeight="34"
                       Background="Transparent"
                       RowBackground="Transparent"
@@ -151,7 +151,7 @@
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="TE" Binding="{Binding TeGlyph}" Width="48">
+                    <DataGridTextColumn Header="TE" Binding="{Binding TeGlyph}" Width="48" IsReadOnly="True">
                         <DataGridTextColumn.HeaderStyle>
                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Do you own the matching Taylored Expressions colour (ink, cardstock, envelope, watercolor)?"/>
@@ -172,7 +172,7 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Supply" Binding="{Binding ExternalGlyph}" Width="68">
+                    <DataGridTextColumn Header="Supply" Binding="{Binding ExternalGlyph}" Width="68" IsReadOnly="True">
                         <DataGridTextColumn.HeaderStyle>
                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Do you own the matching DMC floss / OLO marker for this code? (Detected from inventory items whose type or name mentions DMC/OLO and whose ItemNumber or Name contains the code.)"/>
@@ -193,7 +193,7 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Code" Binding="{Binding ExternalCode}" Width="120">
+                    <DataGridTextColumn Header="Code" Binding="{Binding ExternalCode}" Width="120" IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
@@ -203,7 +203,7 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Taylored Expressions Color" Binding="{Binding TeColorName}" Width="*">
+                    <DataGridTextColumn Header="Taylored Expressions Color" Binding="{Binding TeColorName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
@@ -211,15 +211,31 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="200">
+                    <!-- Notes is the only user-editable column. Double-click /
+                         F2 / single-click-then-type opens the inline editor,
+                         which commits on Enter or focus loss; the ColorMatchRow
+                         setter then pushes the change through to settings.db
+                         via ColorMatchService.UpdateNotes. -->
+                    <DataGridTextColumn Header="Notes"
+                                        Binding="{Binding Notes, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                                        Width="200">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
                                 <Setter Property="Padding" Value="12,0"/>
                                 <Setter Property="FontStyle" Value="Italic"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                <Setter Property="ToolTip" Value="Double-click to edit your notes for this row."/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="10,0"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
                     </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>

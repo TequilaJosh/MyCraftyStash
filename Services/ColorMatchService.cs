@@ -184,6 +184,24 @@ namespace MyCraftyStash.Services
             ctx.SaveChanges();
         }
 
+        /// <summary>Persist a user-edited per-row note. No-op when the row
+        /// doesn't exist (e.g. the user is editing a stale UI cache).</summary>
+        public void UpdateNotes(int id, string? notes)
+        {
+            try
+            {
+                using var ctx = CreateContext();
+                var row = ctx.ColorMatches.FirstOrDefault(c => c.Id == id);
+                if (row == null) return;
+                row.Notes = notes;
+                ctx.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"ColorMatchService.UpdateNotes(id={id})");
+            }
+        }
+
         // ── Seeding ──────────────────────────────────────────────────────────
 
         public void EnsureSeeded()

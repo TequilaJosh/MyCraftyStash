@@ -45,7 +45,7 @@ namespace MyCraftyStash.ViewModels
     /// matching DMC floss / OLO marker (external-side). The tooltip and
     /// the row colour change based on both signals.
     /// </summary>
-    public class ColorMatchRow
+    public class ColorMatchRow : ObservableObject
     {
         public ColorMatch Match { get; init; } = new();
 
@@ -65,11 +65,36 @@ namespace MyCraftyStash.ViewModels
         public bool IsAnyOwned   => IsOwnedTe || IsOwnedExternal;
 
         // Direct property surface so XAML bindings don't have to dot through
-        // .Match. Read-only — edits go through the service.
+        // .Match. Identity fields are init-only; Notes is editable and
+        // persists through the SaveNotes callback wired up by the VM.
         public string ExternalCode => Match.ExternalCode;
         public string TeColorName  => Match.TeColorName;
-        public string? Notes       => Match.Notes;
         public string  System      => Match.System;
+
+        /// <summary>
+        /// Editable per-row note. Setter pushes through to the backing
+        /// <see cref="ColorMatch"/>, raises PropertyChanged for the
+        /// HoverHint dependent, and fires <see cref="SaveNotes"/> so the VM
+        /// can persist. Whitespace-only values are stored as null so the DB
+        /// stays clean.
+        /// </summary>
+        public string? Notes
+        {
+            get => Match.Notes;
+            set
+            {
+                var normalised = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+                if (Match.Notes == normalised) return;
+                Match.Notes = normalised;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HoverHint));
+                SaveNotes?.Invoke(this);
+            }
+        }
+
+        /// <summary>VM-supplied callback that persists Notes to the database.
+        /// Wired up after each row is constructed in Reload.</summary>
+        public Action<ColorMatchRow>? SaveNotes { get; set; }
 
         /// <summary>TE-side glyph for the column header.</summary>
         public string TeGlyph => IsOwnedTe ? "✓" : "○";
@@ -216,6 +241,11 @@ namespace MyCraftyStash.ViewModels
                 IsOwnedTe       = ownedTe.Contains(m.TeColorName),
                 IsOwnedExternal = ExternalOwned(m.ExternalCode),
             }).ToList();
+
+            // Wire each row to persist notes back through the service the
+            // moment the binding pushes a change.
+            foreach (var row in _all)
+                row.SaveNotes = r => _service.UpdateNotes(r.Match.Id, r.Match.Notes);
 
             // Distinct TE color names — the owned percentage should reflect
             // colors, not chart rows (since some TE colors have multiple
