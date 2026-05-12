@@ -184,37 +184,6 @@ namespace MyCraftyStash.Services
             ctx.SaveChanges();
         }
 
-        /// <summary>Wipe every row for the given system. Used by the
-        /// "Re-seed defaults" escape hatch in the ViewModel.</summary>
-        public void WipeSystem(string system)
-        {
-            try
-            {
-                using var ctx = CreateContext();
-                ctx.Database.Migrate();
-                var rows = ctx.ColorMatches.Where(c => c.System == system);
-                ctx.ColorMatches.RemoveRange(rows);
-                ctx.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogDatabaseError(ex, $"ColorMatchService.WipeSystem({system})");
-                throw;
-            }
-        }
-
-        /// <summary>Reset the seeded flag and re-run the seed regardless of
-        /// whether it ran this process. Pairs with WipeSystem for a full
-        /// reset.</summary>
-        public void ForceReseed()
-        {
-            lock (_seedLock)
-            {
-                _seeded = false;
-            }
-            EnsureSeeded();
-        }
-
         // ── Seeding ──────────────────────────────────────────────────────────
 
         public void EnsureSeeded()

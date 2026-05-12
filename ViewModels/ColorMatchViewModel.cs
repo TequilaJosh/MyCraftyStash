@@ -264,27 +264,5 @@ namespace MyCraftyStash.ViewModels
         [RelayCommand] private void FilterAll()     => Filter = FilterMode.All;
         [RelayCommand] private void FilterOwned()   => Filter = FilterMode.Owned;
         [RelayCommand] private void FilterMissing() => Filter = FilterMode.Missing;
-
-        /// <summary>
-        /// Wipes the current system's rows and re-runs the seed from the
-        /// hardcoded defaults. Escape hatch for when the table got into a
-        /// weird state.
-        /// </summary>
-        [RelayCommand]
-        private void Reseed()
-        {
-            try
-            {
-                _service.WipeSystem(System);
-                _service.ForceReseed();
-                Reload();
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError(ex, $"SystemColorMatchViewModel.Reseed({System})");
-                DiagnosticText = $"Re-seed failed: {ex.Message}";
-                OnPropertyChanged(nameof(ShowDiagnostic));
-            }
-        }
     }
 }
