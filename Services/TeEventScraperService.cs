@@ -1,5 +1,6 @@
-using System.Net.Http;
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using MyCraftyStash.Data;
@@ -8,21 +9,38 @@ using MyCraftyStash.Services.Catalog;
 
 namespace MyCraftyStash.Services
 {
+    /// <summary>One row of the shop's weekly hours, as displayed on the calendar.</summary>
+    public class TeShopHoursLine
+    {
+        public string Day  { get; set; } = string.Empty;   // "Monday"
+        public string Text { get; set; } = string.Empty;   // "09:00 am - 05:00 pm" or "Closed"
+    }
+
     /// <summary>
-    /// Scrapes the Taylored Expressions Square Online site for the published
-    /// monthly calendar (current + next month per the user's request) and
-    /// caches results in settings.db.te_events_cache so the calendar overlay
-    /// keeps working offline.
+    /// Scrapes the Taylored Expressions Square Online site for:
+    ///   1) class events (the /classes page) — cached in settings.db.te_events_cache
+    ///   2) shop weekly hours (the homepage) — cached in settings.db.kv_settings
+    /// so the calendar overlay and the hours panel keep working offline.
     ///
-    /// Square Online sites embed their content as a JSON blob in a
-    /// &lt;script&gt; tag (the "site-state" payload) — much more stable than
-    /// scraping the rendered DOM. We try the JSON-LD Event schema first
-    /// (cleanest), then fall back to that site-state payload, then to
-    /// regex'd headings as a last resort.
+    /// Square Online ships its content as a single big JSON state blob under
+    /// `window.__BOOTSTRAP_STATE__ = {...};` in an inline &lt;script&gt;. We
+    /// extract that, parse it with System.Text.Json, and walk the tree for
+    /// the shapes we care about. The old JSON-LD / heuristic-regex strategies
+    /// have been removed — Square doesn't emit JSON-LD events, and the regex
+    /// fallback produced too many false positives.
     /// </summary>
     public class TeEventScraperService
     {
-        public const string SiteUrl = "https://taylored-expressions-inc.square.site/";
+        public const string SiteUrl    = "https://taylored-expressions-inc.square.site/";
+        public const string ClassesUrl = "https://taylored-expressions-inc.square.site/classes";
+
+        // Where image src paths in figures are relative — we have to prefix
+        // them so the WPF image loader can resolve them.
+        private const string ImageOrigin = "https://taylored-expressions-inc.square.site";
+
+        // KvSettings keys for the shop-hours cache.
+        private const string HoursJsonKey      = "te.shop.hours.v1";
+        private const string HoursFetchedAtKey = "te.shop.hours.fetched_at.v1";
 
         /// <summary>How long a successful fetch is considered fresh. Shorter
         /// windows mean more HTTP traffic; the calendar refreshes once a day
@@ -30,6 +48,8 @@ namespace MyCraftyStash.Services
         public static readonly TimeSpan FreshFor = TimeSpan.FromHours(20);
 
         private SettingsDbContext CreateContext() => new SettingsDbContext();
+
+        // ── Public API ───────────────────────────────────────────────────────
 
         /// <summary>Returns cached events overlapping the given date range
         /// (inclusive). Always cheap — no network — so safe to call from
@@ -50,6 +70,25 @@ namespace MyCraftyStash.Services
             {
                 LoggingService.LogDatabaseError(ex, "TeEventScraperService.GetCached");
                 return new List<TeEventCache>();
+            }
+        }
+
+        /// <summary>Cached shop weekly hours in Sunday→Saturday order. Empty list
+        /// when nothing has been fetched yet. No network. Safe on the UI thread.</summary>
+        public List<TeShopHoursLine> GetCachedShopHours()
+        {
+            try
+            {
+                using var ctx = CreateContext();
+                var row = ctx.KvSettings.AsNoTracking().FirstOrDefault(k => k.Key == HoursJsonKey);
+                if (row == null || string.IsNullOrWhiteSpace(row.Value)) return new List<TeShopHoursLine>();
+                var lines = JsonSerializer.Deserialize<List<TeShopHoursLine>>(row.Value);
+                return lines ?? new List<TeShopHoursLine>();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, "TeEventScraperService.GetCachedShopHours");
+                return new List<TeShopHoursLine>();
             }
         }
 
@@ -75,10 +114,22 @@ namespace MyCraftyStash.Services
             try
             {
                 using var ctx = CreateContext();
-                var newest = ctx.TeEventsCache.AsNoTracking()
+                var newestEvent = ctx.TeEventsCache.AsNoTracking()
                     .OrderByDescending(e => e.FetchedAt)
                     .Select(e => (DateTime?)e.FetchedAt)
                     .FirstOrDefault();
+                var hoursFetched = ParseHoursFetchedAt(ctx);
+
+                // Stale if either cache is empty or older than FreshFor. We
+                // refresh both together, so use the older of the two as the
+                // staleness gate.
+                var newest = (newestEvent, hoursFetched) switch
+                {
+                    (null, null) => (DateTime?)null,
+                    (DateTime a, null) => a,
+                    (null, DateTime b) => b,
+                    (DateTime a, DateTime b) => a < b ? a : b,
+                };
                 if (newest == null) return true;
                 return DateTime.UtcNow - newest.Value > FreshFor;
             }
@@ -88,26 +139,43 @@ namespace MyCraftyStash.Services
             }
         }
 
+        private static DateTime? ParseHoursFetchedAt(SettingsDbContext ctx)
+        {
+            var row = ctx.KvSettings.AsNoTracking().FirstOrDefault(k => k.Key == HoursFetchedAtKey);
+            if (row == null || string.IsNullOrWhiteSpace(row.Value)) return null;
+            return DateTime.TryParse(row.Value, null, DateTimeStyles.RoundtripKind, out var d) ? d : null;
+        }
+
         public async Task FetchAndCacheAsync(CancellationToken ct = default)
+        {
+            // Events and hours are fetched independently so one failure can't
+            // prevent the other from succeeding.
+            await TryRefreshEventsAsync(ct).ConfigureAwait(false);
+            await TryRefreshHoursAsync(ct).ConfigureAwait(false);
+        }
+
+        // ── Events refresh ───────────────────────────────────────────────────
+
+        private async Task TryRefreshEventsAsync(CancellationToken ct)
         {
             List<TeEventCache> events;
             try
             {
-                using var resp = await CatalogHttpClient.Instance.GetAsync(SiteUrl, ct);
+                using var resp = await CatalogHttpClient.Instance.GetAsync(ClassesUrl, ct);
                 resp.EnsureSuccessStatusCode();
                 var html = await resp.Content.ReadAsStringAsync(ct);
-                events = ParseEvents(html);
-                LoggingService.LogInfo($"TeEventScraperService: parsed {events.Count} events from {SiteUrl}");
+                events = ParseEventsFromBootstrap(html);
+                LoggingService.LogInfo($"TeEventScraperService: parsed {events.Count} events from {ClassesUrl}");
             }
             catch (Exception ex)
             {
-                LoggingService.LogError(ex, "TeEventScraperService.FetchAndCacheAsync");
+                LoggingService.LogError(ex, "TeEventScraperService.TryRefreshEventsAsync.fetch");
                 return;
             }
 
             if (events.Count == 0)
             {
-                LoggingService.LogWarning("TeEventScraperService: parser found no events — leaving cache untouched");
+                LoggingService.LogWarning("TeEventScraperService: event parser found no events — leaving cache untouched");
                 return;
             }
 
@@ -116,8 +184,7 @@ namespace MyCraftyStash.Services
                 using var ctx = CreateContext();
                 var now = DateTime.UtcNow;
 
-                // Upsert by ExternalId. Drop anything in the cache that's
-                // older than yesterday (already-passed events).
+                // Drop anything that's already passed so the cache doesn't grow forever.
                 var cutoff = DateTime.Now.Date.AddDays(-1);
                 var stale = ctx.TeEventsCache.Where(e => e.EventDate < cutoff);
                 ctx.TeEventsCache.RemoveRange(stale);
@@ -133,198 +200,377 @@ namespace MyCraftyStash.Services
                     }
                     else
                     {
-                        existing.EventDate    = fetched.EventDate;
-                        existing.Title        = fetched.Title;
-                        existing.Description  = fetched.Description;
-                        existing.Url          = fetched.Url;
-                        existing.ImageUrl     = fetched.ImageUrl;
-                        existing.FetchedAt    = now;
+                        existing.EventDate   = fetched.EventDate;
+                        existing.Title       = fetched.Title;
+                        existing.Description = fetched.Description;
+                        existing.Url         = fetched.Url;
+                        existing.ImageUrl    = fetched.ImageUrl;
+                        existing.FetchedAt   = now;
                     }
                 }
                 await ctx.SaveChangesAsync(ct);
             }
             catch (Exception ex)
             {
-                LoggingService.LogDatabaseError(ex, "TeEventScraperService.FetchAndCacheAsync save");
+                LoggingService.LogDatabaseError(ex, "TeEventScraperService.TryRefreshEventsAsync.save");
             }
         }
 
-        // ── Parsing ──────────────────────────────────────────────────────────
-        // Square Online doesn't expose a public events API, so this is a
-        // best-effort multi-strategy parser. Each strategy is independent;
-        // first hit with results wins.
+        // ── Shop-hours refresh ───────────────────────────────────────────────
 
-        private static List<TeEventCache> ParseEvents(string html)
+        private async Task TryRefreshHoursAsync(CancellationToken ct)
         {
-            var fromJsonLd = ParseFromJsonLd(html);
-            if (fromJsonLd.Count > 0) return fromJsonLd;
-
-            var fromState = ParseFromSiteState(html);
-            if (fromState.Count > 0) return fromState;
-
-            return ParseFromHeadings(html);
-        }
-
-        private static readonly Regex JsonLdRx = new(
-            @"<script[^>]*type\s*=\s*[""']application/ld\+json[""'][^>]*>(?<json>.*?)</script>",
-            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static List<TeEventCache> ParseFromJsonLd(string html)
-        {
-            var result = new List<TeEventCache>();
-            foreach (Match m in JsonLdRx.Matches(html))
+            List<TeShopHoursLine> hours;
+            try
             {
-                var json = m.Groups["json"].Value.Trim();
-                try
-                {
-                    using var doc = JsonDocument.Parse(json);
-                    CollectEventsFromJsonLd(doc.RootElement, result);
-                }
-                catch
-                {
-                    // ignore invalid JSON-LD blocks; fall through to next strategy
-                }
+                using var resp = await CatalogHttpClient.Instance.GetAsync(SiteUrl, ct);
+                resp.EnsureSuccessStatusCode();
+                var html = await resp.Content.ReadAsStringAsync(ct);
+                hours = ParseShopHoursFromBootstrap(html);
+                LoggingService.LogInfo($"TeEventScraperService: parsed {hours.Count} shop-hour lines from {SiteUrl}");
             }
-            return result;
-        }
-
-        private static void CollectEventsFromJsonLd(JsonElement el, List<TeEventCache> sink)
-        {
-            if (el.ValueKind == JsonValueKind.Array)
+            catch (Exception ex)
             {
-                foreach (var item in el.EnumerateArray()) CollectEventsFromJsonLd(item, sink);
+                LoggingService.LogError(ex, "TeEventScraperService.TryRefreshHoursAsync.fetch");
                 return;
             }
-            if (el.ValueKind != JsonValueKind.Object) return;
 
-            // Recurse into @graph if present.
-            if (el.TryGetProperty("@graph", out var graph))
-                CollectEventsFromJsonLd(graph, sink);
-
-            var typeStr = el.TryGetProperty("@type", out var t)
-                          ? t.ValueKind == JsonValueKind.String ? t.GetString() : null
-                          : null;
-            if (typeStr != null && typeStr.Contains("Event", StringComparison.OrdinalIgnoreCase))
+            if (hours.Count == 0)
             {
-                var name  = el.TryGetProperty("name", out var n) ? n.GetString() : null;
-                var date  = el.TryGetProperty("startDate", out var d) ? d.GetString() : null;
-                var url   = el.TryGetProperty("url", out var u) ? u.GetString() : null;
-                var desc  = el.TryGetProperty("description", out var dd) ? dd.GetString() : null;
-                var image = el.TryGetProperty("image", out var im)
-                            ? im.ValueKind == JsonValueKind.String ? im.GetString()
-                              : im.ValueKind == JsonValueKind.Object && im.TryGetProperty("url", out var iu)
-                                ? iu.GetString() : null
-                            : null;
+                LoggingService.LogWarning("TeEventScraperService: hours parser found nothing — leaving cache untouched");
+                return;
+            }
 
-                if (!string.IsNullOrWhiteSpace(name) &&
-                    !string.IsNullOrWhiteSpace(date) &&
-                    DateTime.TryParse(date, out var parsed))
-                {
-                    sink.Add(new TeEventCache
-                    {
-                        ExternalId  = (url ?? $"{name}|{parsed:yyyy-MM-dd}").GetHashCode().ToString("X"),
-                        EventDate   = parsed.Date,
-                        Title       = name!.Trim(),
-                        Description = desc,
-                        Url         = url,
-                        ImageUrl    = image,
-                    });
-                }
+            try
+            {
+                using var ctx = CreateContext();
+                var json = JsonSerializer.Serialize(hours);
+                Upsert(ctx, HoursJsonKey, json);
+                Upsert(ctx, HoursFetchedAtKey, DateTime.UtcNow.ToString("o"));
+                await ctx.SaveChangesAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, "TeEventScraperService.TryRefreshHoursAsync.save");
             }
         }
 
-        // Square Online ships an inline JSON state blob; the exact key path is
-        // theme-dependent so we look for a generic "events" array containing
-        // objects with "title" + "date"/"startDate" fields.
-        private static List<TeEventCache> ParseFromSiteState(string html)
+        private static void Upsert(SettingsDbContext ctx, string key, string value)
         {
-            var result = new List<TeEventCache>();
-            var stateRx = new Regex(
-                @"<script[^>]*>(?<j>\s*\{.*?""events""\s*:\s*\[.*?\].*?\})\s*</script>",
-                RegexOptions.Singleline | RegexOptions.IgnoreCase);
-            foreach (Match m in stateRx.Matches(html))
-            {
-                try
-                {
-                    using var doc = JsonDocument.Parse(m.Groups["j"].Value);
-                    WalkForEvents(doc.RootElement, result);
-                }
-                catch { }
-            }
-            return result;
+            var row = ctx.KvSettings.FirstOrDefault(k => k.Key == key);
+            if (row == null) ctx.KvSettings.Add(new KvSetting { Key = key, Value = value });
+            else row.Value = value;
         }
 
-        private static void WalkForEvents(JsonElement el, List<TeEventCache> sink)
+        // ── Bootstrap-state extraction ───────────────────────────────────────
+
+        private const string BootstrapMarker = "window.__BOOTSTRAP_STATE__";
+
+        /// <summary>
+        /// Carves out the JSON object assigned to window.__BOOTSTRAP_STATE__,
+        /// honoring string boundaries and escapes so braces inside string
+        /// literals don't confuse the depth counter.
+        /// </summary>
+        internal static JsonNode? ExtractBootstrapState(string html)
         {
-            if (el.ValueKind == JsonValueKind.Object)
+            var idx = html.IndexOf(BootstrapMarker, StringComparison.Ordinal);
+            if (idx < 0) return null;
+            var braceIdx = html.IndexOf('{', idx);
+            if (braceIdx < 0) return null;
+
+            int depth = 0;
+            bool inString = false;
+            bool escape = false;
+            int end = -1;
+            for (int i = braceIdx; i < html.Length; i++)
             {
-                foreach (var p in el.EnumerateObject())
+                char c = html[i];
+                if (escape) { escape = false; continue; }
+                if (c == '\\') { escape = true; continue; }
+                if (c == '"') { inString = !inString; continue; }
+                if (inString) continue;
+                if (c == '{') depth++;
+                else if (c == '}')
                 {
-                    if (p.NameEquals("events") && p.Value.ValueKind == JsonValueKind.Array)
+                    depth--;
+                    if (depth == 0) { end = i; break; }
+                }
+            }
+            if (end < 0) return null;
+            var json = html.Substring(braceIdx, end - braceIdx + 1);
+            try { return JsonNode.Parse(json); }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "TeEventScraperService.ExtractBootstrapState.JsonParse");
+                return null;
+            }
+        }
+
+        // ── Event parser ─────────────────────────────────────────────────────
+
+        // "Thursday, June 18th from 1:00pm - 3:00pm" or "June 18 from 1pm-3pm"
+        // The day-of-week prefix is optional; the time range is optional.
+        private static readonly Regex EventDateTimeRx = new(
+            @"(?:(?<dow>Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+)?" +
+            @"(?<month>January|February|March|April|May|June|July|August|September|October|November|December)" +
+            @"\s+(?<day>\d{1,2})(?:st|nd|rd|th)?" +
+            @"(?:,?\s+(?<year>\d{4}))?" +
+            @"(?:\s+from\s+(?<start>\d{1,2}(?::\d{2})?\s*[ap]m)" +
+            @"(?:\s*[-–]\s*(?<end>\d{1,2}(?::\d{2})?\s*[ap]m))?)?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        internal static List<TeEventCache> ParseEventsFromBootstrap(string html)
+        {
+            var root = ExtractBootstrapState(html);
+            if (root == null) return new List<TeEventCache>();
+
+            var events = new List<TeEventCache>();
+            CollectEventBlocks(root, events);
+
+            // Deduplicate by ExternalId in case the tree walk visits the same
+            // node twice (Square's state can be shared across page variants).
+            return events
+                .GroupBy(e => e.ExternalId)
+                .Select(g => g.First())
+                .OrderBy(e => e.EventDate)
+                .ToList();
+        }
+
+        private static void CollectEventBlocks(JsonNode node, List<TeEventCache> sink)
+        {
+            switch (node)
+            {
+                case JsonArray arr:
+                    foreach (var child in arr) if (child != null) CollectEventBlocks(child, sink);
+                    break;
+                case JsonObject obj:
+                    // Square content blocks look like:
+                    //   { id, text:{content:{quill:{ops:[...]}}}, image:{figure:{source,...}}, button:{link:{link:{external}}, label}, title:{content}, ... }
+                    // We treat a block as an "event" if its quill text contains
+                    // at least one date pattern. That filters newsletter-signup
+                    // and decorative blocks out cleanly.
+                    if (TryParseEventBlock(obj, sink))
                     {
-                        foreach (var ev in p.Value.EnumerateArray())
-                        {
-                            var title = TryStr(ev, "title", "name", "label");
-                            var when  = TryStr(ev, "date", "startDate", "start", "starts_at");
-                            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(when)) continue;
-                            if (!DateTime.TryParse(when, out var d)) continue;
-                            var url   = TryStr(ev, "url", "permalink");
-                            var image = TryStr(ev, "image", "imageUrl", "image_url", "photo");
-                            sink.Add(new TeEventCache
-                            {
-                                ExternalId = (url ?? $"{title}|{d:yyyy-MM-dd}").GetHashCode().ToString("X"),
-                                EventDate  = d.Date,
-                                Title      = title!.Trim(),
-                                Url        = url,
-                                ImageUrl   = image,
-                            });
-                        }
+                        // Still descend — some pages nest blocks inside blocks
+                        // and we don't want to miss inner ones, though in
+                        // practice the events sit at the same level.
                     }
-                    else
-                    {
-                        WalkForEvents(p.Value, sink);
-                    }
-                }
-            }
-            else if (el.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in el.EnumerateArray()) WalkForEvents(item, sink);
+                    foreach (var prop in obj)
+                        if (prop.Value != null) CollectEventBlocks(prop.Value, sink);
+                    break;
             }
         }
 
-        private static string? TryStr(JsonElement obj, params string[] names)
+        private static bool TryParseEventBlock(JsonObject obj, List<TeEventCache> sink)
         {
-            if (obj.ValueKind != JsonValueKind.Object) return null;
-            foreach (var n in names)
-                if (obj.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.String)
-                    return v.GetString();
-            return null;
-        }
+            var quillText = ExtractQuillText(obj["text"]);
+            if (string.IsNullOrWhiteSpace(quillText)) return false;
 
-        // Last resort: pull headings that look like dated calendar entries from
-        // the rendered HTML. Best-effort; the JSON paths above should catch
-        // anything Square actually publishes.
-        private static List<TeEventCache> ParseFromHeadings(string html)
-        {
-            var result = new List<TeEventCache>();
-            var dateRx = new Regex(
-                @"\b(?<m>Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(?<d>\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(?<y>\d{4}))?\b",
-                RegexOptions.IgnoreCase);
-            foreach (Match m in dateRx.Matches(html))
+            var matches = EventDateTimeRx.Matches(quillText);
+            if (matches.Count == 0) return false;
+
+            var url = ExtractRegistrationUrl(obj);
+            var imageUrl = ExtractImageUrl(obj);
+            var title = DeriveTitle(url, quillText);
+
+            bool added = false;
+            foreach (Match m in matches)
             {
-                var raw = m.Value;
-                if (DateTime.TryParse(raw, out var d))
+                if (!TryBuildEventDate(m, out var date, out var time)) continue;
+
+                var idBase = url ?? title;
+                var externalId = $"{idBase}|{date:yyyy-MM-dd}";
+                if (time.HasValue) externalId += $"|{time.Value:hh\\:mm}";
+                externalId = externalId.GetHashCode().ToString("X");
+
+                var displayTitle = title;
+                if (time.HasValue)
                 {
-                    if (d.Date < DateTime.Today.AddDays(-1)) continue;
-                    result.Add(new TeEventCache
-                    {
-                        ExternalId = $"heur|{d:yyyy-MM-dd}|{raw.GetHashCode():X}",
-                        EventDate  = d.Date,
-                        Title      = "TE Calendar",
-                    });
+                    displayTitle = $"{title} ({FormatTime(time.Value)})";
+                }
+
+                sink.Add(new TeEventCache
+                {
+                    ExternalId  = externalId,
+                    EventDate   = date,
+                    Title       = displayTitle,
+                    Description = quillText.Length > 500 ? quillText.Substring(0, 500) + "…" : quillText,
+                    Url         = url,
+                    ImageUrl    = imageUrl,
+                });
+                added = true;
+            }
+            return added;
+        }
+
+        private static string ExtractQuillText(JsonNode? textNode)
+        {
+            // text.content.quill.ops[*].insert (string) — concatenate them all.
+            var ops = textNode?["content"]?["quill"]?["ops"] as JsonArray;
+            if (ops == null) return string.Empty;
+            var sb = new System.Text.StringBuilder();
+            foreach (var op in ops)
+            {
+                var ins = op?["insert"];
+                if (ins is JsonValue v && v.TryGetValue<string>(out var s))
+                    sb.Append(s);
+            }
+            return sb.ToString();
+        }
+
+        private static string? ExtractRegistrationUrl(JsonObject obj)
+        {
+            // Prefer the primary button's external link; fall back to image link.
+            var btnUrl = obj["button"]?["link"]?["link"]?["external"]?.GetValue<string?>();
+            if (!string.IsNullOrWhiteSpace(btnUrl)) return btnUrl;
+            var imgUrl = obj["image"]?["link"]?["link"]?["external"]?.GetValue<string?>();
+            return string.IsNullOrWhiteSpace(imgUrl) ? null : imgUrl;
+        }
+
+        private static string? ExtractImageUrl(JsonObject obj)
+        {
+            var src = obj["image"]?["figure"]?["source"]?.GetValue<string?>();
+            if (string.IsNullOrWhiteSpace(src)) return null;
+            if (src.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                src.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return src;
+            return ImageOrigin + (src.StartsWith("/") ? src : "/" + src);
+        }
+
+        /// <summary>
+        /// Pick a human title for the event. Square uses generic block labels
+        /// ("Quality Craftsmanship", "Distinctive and Bold") for layout, so
+        /// the registration URL slug is the most reliable signal. Falls back
+        /// to the first sentence of the description.
+        /// </summary>
+        private static string DeriveTitle(string? url, string description)
+        {
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                var slug = url.TrimEnd('/');
+                var lastSlash = slug.LastIndexOf('/');
+                if (lastSlash >= 0 && lastSlash < slug.Length - 1)
+                    slug = slug.Substring(lastSlash + 1);
+                slug = slug.Replace('-', ' ').Replace('_', ' ').Trim();
+                if (slug.Length > 0)
+                {
+                    var titled = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(slug.ToLowerInvariant());
+                    return titled.Length > 80 ? titled.Substring(0, 80) + "…" : titled;
                 }
             }
-            return result.DistinctBy(e => e.EventDate).ToList();
+            // Fallback: first non-empty line of the description, trimmed.
+            var firstLine = description
+                .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .FirstOrDefault(s => s.Length > 0) ?? "TE Class";
+            return firstLine.Length > 80 ? firstLine.Substring(0, 80) + "…" : firstLine;
+        }
+
+        private static bool TryBuildEventDate(Match m, out DateTime date, out TimeSpan? time)
+        {
+            date = default;
+            time = null;
+            var month = m.Groups["month"].Value;
+            if (!int.TryParse(m.Groups["day"].Value, out var day)) return false;
+
+            int monthNum;
+            try { monthNum = DateTime.ParseExact(month, "MMMM", CultureInfo.InvariantCulture).Month; }
+            catch { return false; }
+
+            int year;
+            if (m.Groups["year"].Success && int.TryParse(m.Groups["year"].Value, out var explicitYear))
+            {
+                year = explicitYear;
+            }
+            else
+            {
+                // No year in source — assume the nearest future occurrence.
+                var today = DateTime.Today;
+                year = today.Year;
+                var candidate = new DateTime(year, monthNum, Math.Clamp(day, 1, DateTime.DaysInMonth(year, monthNum)));
+                if (candidate < today.AddDays(-30)) year++;
+            }
+
+            try { date = new DateTime(year, monthNum, day); }
+            catch { return false; }
+
+            // Optional start time.
+            if (m.Groups["start"].Success)
+            {
+                var raw = m.Groups["start"].Value.Trim().ToUpperInvariant().Replace(" ", "");
+                // Accept "1PM", "1:00PM", "10AM", "10:30AM".
+                if (DateTime.TryParseExact(raw, new[] { "htt", "h:mmtt", "hhtt", "hh:mmtt" },
+                                           CultureInfo.InvariantCulture, DateTimeStyles.None, out var t))
+                    time = t.TimeOfDay;
+            }
+
+            return true;
+        }
+
+        private static string FormatTime(TimeSpan t)
+        {
+            var dt = DateTime.Today + t;
+            return dt.ToString("h:mmtt", CultureInfo.InvariantCulture).ToLowerInvariant();
+        }
+
+        // ── Shop-hours parser ────────────────────────────────────────────────
+
+        // "Monday   09:00 am - 05:00 pm" or "Sunday   Closed"
+        private static readonly Regex HoursLineRx = new(
+            @"^\s*(?<day>Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(?<rest>.+?)\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly string[] WeekOrder =
+            { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+
+        internal static List<TeShopHoursLine> ParseShopHoursFromBootstrap(string html)
+        {
+            var root = ExtractBootstrapState(html);
+            if (root == null) return new List<TeShopHoursLine>();
+
+            // Walk the tree for any object with a "hoursConfig" property whose
+            // shape matches { content: { quill: { ops: [...] } } }.
+            var collected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            CollectHoursBlocks(root, collected);
+
+            // Return in Sunday-first weekday order so the UI doesn't have to sort.
+            return WeekOrder
+                .Where(d => collected.ContainsKey(d))
+                .Select(d => new TeShopHoursLine { Day = d, Text = collected[d] })
+                .ToList();
+        }
+
+        private static void CollectHoursBlocks(JsonNode node, Dictionary<string, string> sink)
+        {
+            switch (node)
+            {
+                case JsonArray arr:
+                    foreach (var c in arr) if (c != null) CollectHoursBlocks(c, sink);
+                    break;
+                case JsonObject obj:
+                    if (obj["hoursConfig"] is JsonNode hours)
+                    {
+                        var text = ExtractQuillText(hours);
+                        if (!string.IsNullOrWhiteSpace(text)) AbsorbHoursText(text, sink);
+                    }
+                    foreach (var p in obj) if (p.Value != null) CollectHoursBlocks(p.Value, sink);
+                    break;
+            }
+        }
+
+        private static void AbsorbHoursText(string blob, Dictionary<string, string> sink)
+        {
+            // Quill ops join into newline-delimited lines like
+            //   "Monday   09:00 am - 05:00 pm"
+            //   "Sunday   Closed"
+            foreach (var rawLine in blob.Split('\n'))
+            {
+                var m = HoursLineRx.Match(rawLine);
+                if (!m.Success) continue;
+                var day = char.ToUpperInvariant(m.Groups["day"].Value[0]) + m.Groups["day"].Value.Substring(1).ToLowerInvariant();
+                var text = Regex.Replace(m.Groups["rest"].Value, @"\s+", " ").Trim();
+                sink[day] = text;
+            }
         }
     }
 }

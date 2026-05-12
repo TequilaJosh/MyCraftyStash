@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using MyCraftyStash.Models;
 using MyCraftyStash.Services;
+using MyCraftyStash.Services.Catalog;
 
 namespace MyCraftyStash.Views
 {
@@ -46,6 +47,21 @@ namespace MyCraftyStash.Views
             try
             {
                 _results = await CatalogLookupService.SearchAsync(query);
+
+                // Prefetch each result's thumbnail through the WebP-aware fetcher
+                // so the list shows actual images instead of empty placeholders.
+                // BigCommerce/Shopify CDNs auto-convert PNG → WebP based on
+                // Accept headers; BitmapImage can't decode that, so we have to
+                // download and re-encode here. Done in parallel so 12 thumbs
+                // take ~ one round trip, not twelve.
+                StatusText.Text = "Loading thumbnails…";
+                await Task.WhenAll(_results
+                    .Where(r => !string.IsNullOrEmpty(r.ImageUrl) && r.ImageUrl.StartsWith("http"))
+                    .Select(async r =>
+                    {
+                        var data = await RemoteImageFetcher.DownloadAsDataUriAsync(r.ImageUrl!);
+                        if (!string.IsNullOrEmpty(data)) r.ImageUrl = data;
+                    }));
 
                 // Flag any results whose item number already exists in the local inventory
                 // so the user sees a duplicate badge in the list and a banner in the preview.

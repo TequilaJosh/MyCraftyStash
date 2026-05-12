@@ -76,4 +76,31 @@ namespace MyCraftyStash.Models
         public string? ImageUrl { get; set; }
         public DateTime FetchedAt { get; set; }
     }
+
+    /// <summary>
+    /// One row per calendar date that the OCR'd monthly calendar image
+    /// publishes content for. Stores the per-day store hours, any special
+    /// status banner (closed / special-open), and a JSON-encoded list of
+    /// events the published calendar shows for that day.
+    /// </summary>
+    public class TeDailyCalendarCache
+    {
+        /// <summary>Calendar date (yyyy-MM-dd in TEXT).</summary>
+        public DateTime Date { get; set; }
+        /// <summary>"10:00 AM - 4:00 PM" or null when the cell has no hours line.</summary>
+        public string? Hours { get; set; }
+        /// <summary>"Closed", "Open: 10am-3pm", etc. Null when no banner.</summary>
+        public string? Status { get; set; }
+        /// <summary>JSON-encoded List&lt;TeDailyEventLine&gt; — event chips for this day.</summary>
+        public string? EventsJson { get; set; }
+        public DateTime FetchedAt { get; set; }
+    }
+
+    /// <summary>A single event line extracted from the published calendar image.</summary>
+    public class TeDailyEventLine
+    {
+        public string Title { get; set; } = string.Empty;
+        /// <summary>Time range as printed on the calendar, e.g. "1pm - 3pm". Null when no time was found.</summary>
+        public string? Time { get; set; }
+    }
 }

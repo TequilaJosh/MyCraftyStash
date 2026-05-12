@@ -54,6 +54,11 @@ namespace MyCraftyStash.ViewModels
             // logged but never block startup; the calendar overlay just
             // shows the previous cache.
             _ = new TeEventScraperService().RefreshIfStaleAsync();
+            // OCR-pass over TE's published monthly-calendar JPEGs. Heavier
+            // than the JSON scrapers (downloads images + runs Tesseract on
+            // each), so it sits behind the same staleness gate but lives in
+            // its own task chain.
+            _ = new TeCalendarOcrService().RefreshIfStaleAsync();
 
             CurrentView = HomeVM;
             _ = HomeVM.LoadAsync();

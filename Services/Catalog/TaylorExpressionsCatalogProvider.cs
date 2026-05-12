@@ -101,7 +101,7 @@ namespace MyCraftyStash.Services.Catalog
                 var base64Images = new List<string>();
                 foreach (var imgUrl in httpImages.Take(8))
                 {
-                    var b64 = await DownloadAsBase64Async(imgUrl, ct);
+                    var b64 = await RemoteImageFetcher.DownloadAsDataUriAsync(imgUrl, ct);
                     if (!string.IsNullOrEmpty(b64)) base64Images.Add(b64);
                 }
 

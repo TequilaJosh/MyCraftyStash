@@ -22,5 +22,20 @@ namespace MyCraftyStash.ViewModels
         private ObservableCollection<CalendarEvent> _events = new();
 
         public bool HasEvents => Events.Count > 0;
+
+        // ── TE-published-calendar overlay (OCR'd from the storefront PDFs) ──
+        /// <summary>Store hours for this day, e.g. "10:00 AM - 4:00 PM". Null when no hours line is shown.</summary>
+        [ObservableProperty] private string? _teHours;
+        /// <summary>"Closed", "Open: 10am - 3pm". Null when no banner.</summary>
+        [ObservableProperty] private string? _teStatus;
+        /// <summary>Event chips from the calendar image (separate from /classes events).</summary>
+        [ObservableProperty] private ObservableCollection<TeDailyEventLine> _teEvents = new();
+
+        public bool HasTeHours => !string.IsNullOrEmpty(TeHours);
+        public bool HasTeStatus => !string.IsNullOrEmpty(TeStatus);
+        public bool HasTeEvents => TeEvents.Count > 0;
+
+        partial void OnTeHoursChanged(string? value) => OnPropertyChanged(nameof(HasTeHours));
+        partial void OnTeStatusChanged(string? value) => OnPropertyChanged(nameof(HasTeStatus));
     }
 }

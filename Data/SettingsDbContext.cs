@@ -17,6 +17,7 @@ namespace MyCraftyStash.Data
         public DbSet<ConfigList> ConfigLists { get; set; }
         public DbSet<ColorMatch> ColorMatches { get; set; }
         public DbSet<TeEventCache> TeEventsCache { get; set; }
+        public DbSet<TeDailyCalendarCache> TeDailyCalendar { get; set; }
 
         public SettingsDbContext() { }
 
@@ -101,6 +102,17 @@ namespace MyCraftyStash.Data
                 e.Property(x => x.FetchedAt).HasColumnName("fetched_at");
                 e.HasIndex(x => x.ExternalId).IsUnique();
                 e.HasIndex(x => x.EventDate);
+            });
+
+            modelBuilder.Entity<TeDailyCalendarCache>(e =>
+            {
+                e.ToTable("te_daily_calendar");
+                e.HasKey(x => x.Date);
+                e.Property(x => x.Date).HasColumnName("date");
+                e.Property(x => x.Hours).HasColumnName("hours");
+                e.Property(x => x.Status).HasColumnName("status");
+                e.Property(x => x.EventsJson).HasColumnName("events_json");
+                e.Property(x => x.FetchedAt).HasColumnName("fetched_at");
             });
         }
     }

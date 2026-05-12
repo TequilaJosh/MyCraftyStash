@@ -10,8 +10,10 @@ namespace MyCraftyStash.ViewModels
     {
         private readonly CalendarService _service;
         private readonly TeEventScraperService _teEvents = new();
+        private readonly TeCalendarOcrService _teCalendarOcr = new();
         // FIX #11: Removed unused _mainVm field - was preventing GC of MainViewModel reference
         private List<CalendarEvent> _monthEvents = new();
+        private Dictionary<DateTime, TeDailyCalendarCache> _teDailyLookup = new();
 
         // ── Calendar navigation ──────────────────────────────────────────
         [ObservableProperty] private int _currentYear;
@@ -23,6 +25,9 @@ namespace MyCraftyStash.ViewModels
         // ── Selected day events panel ────────────────────────────────────
         [ObservableProperty] private ObservableCollection<CalendarEvent> _selectedDayEvents = new();
         [ObservableProperty] private CalendarEvent? _selectedEvent;
+
+        // ── TE shop hours (scraped from the storefront homepage) ─────────
+        [ObservableProperty] private ObservableCollection<TeShopHoursLine> _shopHours = new();
 
         // ── Form state ───────────────────────────────────────────────────
         [ObservableProperty] private bool _isAdding;
@@ -122,12 +127,24 @@ namespace MyCraftyStash.ViewModels
                     });
                 }
 
+                // Pull OCR'd per-day data for the month being rendered so the
+                // grid can show TE's published hours/status/events per cell.
+                var dailyRange = _teCalendarOcr.GetCachedForRange(
+                    firstOfMonth.AddDays(-7),    // include some prev-month carry-over rows
+                    lastOfMonth.AddDays(7));
+                _teDailyLookup = dailyRange.ToDictionary(d => d.Date, d => d);
+
                 BuildCalendarGrid();
                 if (SelectedDay != null)
                 {
                     var cell = DayCells.FirstOrDefault(c => c.Date == SelectedDay.Date);
                     if (cell != null) SelectDay(cell);
                 }
+
+                // Shop hours are global, not per-month, but loading them here
+                // keeps the calendar self-contained — and is cheap (single
+                // KvSetting row read).
+                ShopHours = new ObservableCollection<TeShopHoursLine>(_teEvents.GetCachedShopHours());
             }
             catch (Exception ex)
             {
@@ -225,6 +242,30 @@ namespace MyCraftyStash.ViewModels
         private void SetColor(string color)
         {
             EditColor = color;
+        }
+
+        /// <summary>
+        /// Opens a Taylored Expressions registration URL in the user's default browser.
+        /// Bound to the "Sign up" link rendered on TE-sourced events in the day panel.
+        /// </summary>
+        [RelayCommand]
+        private void OpenEventUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return;
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = uri.AbsoluteUri,
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"CalendarViewModel.OpenEventUrl({url})");
+            }
         }
 
         [RelayCommand]
@@ -356,6 +397,7 @@ namespace MyCraftyStash.ViewModels
                     IsToday = d.Date == DateTime.Today,
                     Events = new System.Collections.ObjectModel.ObservableCollection<CalendarEvent>(events)
                 };
+                ApplyTeDailyOverlay(cell);
                 cells.Add(cell);
             }
 
@@ -374,6 +416,30 @@ namespace MyCraftyStash.ViewModels
         private void UpdateMonthLabel()
         {
             CurrentMonthLabel = new DateTime(CurrentYear, CurrentMonth, 1).ToString("MMMM yyyy");
+        }
+
+        /// <summary>
+        /// Paint a day cell with whatever the OCR'd published calendar said
+        /// about that date. No-op when there's no row in the daily cache.
+        /// </summary>
+        private void ApplyTeDailyOverlay(CalendarDayCell cell)
+        {
+            if (!_teDailyLookup.TryGetValue(cell.Date.Date, out var daily)) return;
+            cell.TeHours = daily.Hours;
+            cell.TeStatus = daily.Status;
+            if (!string.IsNullOrWhiteSpace(daily.EventsJson))
+            {
+                try
+                {
+                    var list = System.Text.Json.JsonSerializer.Deserialize<List<TeDailyEventLine>>(daily.EventsJson);
+                    if (list != null && list.Count > 0)
+                        cell.TeEvents = new System.Collections.ObjectModel.ObservableCollection<TeDailyEventLine>(list);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError(ex, "CalendarViewModel.ApplyTeDailyOverlay.DeserializeEvents");
+                }
+            }
         }
 
         private void ClearForm()

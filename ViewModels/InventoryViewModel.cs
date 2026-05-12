@@ -1695,6 +1695,9 @@ namespace MyCraftyStash.ViewModels
             NewItemSiteUrl = string.Empty;
             DuplicateItemWarning = null;
             DuplicateItemId = null;
+            // Clear any snips captured in a prior Add session so they can't leak
+            // onto an unrelated item on the next save.
+            PendingSnips.Clear();
             ClearFieldErrors();
         }
         
@@ -1838,13 +1841,25 @@ namespace MyCraftyStash.ViewModels
                 var createdItem = await _service.CreateItemAsync(item);
                 LoggingService.LogInfo($"Item created with ID: {createdItem.Id}");
 
-                // Flush any pending sentiment snips captured during add
+                // Flush any pending sentiment snips captured during add.
+                // Snapshot and clear BEFORE iterating so a failure mid-flush can't
+                // strand stale snips that would later attach to a different item.
                 if (PendingSnips.Count > 0)
                 {
-                    var sentimentSvc = new SentimentService();
-                    foreach (var snip in PendingSnips)
-                        await sentimentSvc.AddSentimentImageAsync(createdItem.Id, snip.ImageData, snip.Text);
+                    var snipsToFlush = PendingSnips.ToList();
                     PendingSnips.Clear();
+                    var sentimentSvc = new SentimentService();
+                    foreach (var snip in snipsToFlush)
+                    {
+                        try
+                        {
+                            await sentimentSvc.AddSentimentImageAsync(createdItem.Id, snip.ImageData, snip.Text);
+                        }
+                        catch (Exception snipEx)
+                        {
+                            LoggingService.LogError(snipEx, $"Failed to save sentiment snip for item {createdItem.Id}");
+                        }
+                    }
                 }
                 
                 // Automatically add purchase history entry if price is set

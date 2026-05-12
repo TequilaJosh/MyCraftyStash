@@ -110,9 +110,13 @@ namespace MyCraftyStash.ViewModels
         
         [ObservableProperty]
         private bool _isViewingItem;
-        
+
         [ObservableProperty]
         private Item? _currentItem;
+
+        /// <summary>Currently-displayed hero image (gallery selection). Null falls back to CurrentItem.ImageUrl in XAML.</summary>
+        [ObservableProperty]
+        private string? _currentDisplayImage;
         
         [ObservableProperty]
         private ObservableCollection<ItemImage> _currentItemImages = new();
@@ -296,7 +300,8 @@ namespace MyCraftyStash.ViewModels
                 if (item == null) return;
                 
                 CurrentItem = item;
-                
+                CurrentDisplayImage = item.ImageUrl;
+
                 var images = await _inventoryService.GetItemImagesAsync(result.ItemId);
                 CurrentItemImages = new ObservableCollection<ItemImage>(images);
                 
@@ -395,9 +400,21 @@ namespace MyCraftyStash.ViewModels
         {
             IsViewingItem = false;
             CurrentItem = null;
+            CurrentDisplayImage = null;
             CurrentItemImages.Clear();
             CurrentItemRelated.Clear();
             CurrentItemSentiments.Clear();
+        }
+
+        public void SelectGalleryImage(ItemImage clickedImage)
+        {
+            if (clickedImage == null) return;
+            CurrentDisplayImage = clickedImage.ImageUrl;
+        }
+
+        public void SelectMainImage()
+        {
+            CurrentDisplayImage = CurrentItem?.ImageUrl;
         }
         
         [RelayCommand]

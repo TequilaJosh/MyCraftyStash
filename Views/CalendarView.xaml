@@ -157,18 +157,55 @@
                                     </Border>
                                 </Grid>
 
-                                <!-- Event chips (up to 3) -->
-                                <ItemsControl Grid.Row="1" ItemsSource="{Binding Events}" Margin="0,2,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="3" Margin="0,1" Padding="4,1"
-                                                    Background="{DynamicResource PrimaryBrush}">
-                                                <TextBlock Text="{Binding Title}" FontSize="10" Foreground="White"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <!-- Per-cell content stack: TE hours/status, TE events, then user events -->
+                                <StackPanel Grid.Row="1" Margin="0,2,0,0">
+
+                                    <!-- TE published store hours (small caption) -->
+                                    <TextBlock Text="{Binding TeHours}" FontSize="9"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding HasTeHours, Converter={StaticResource BoolToVisConverter}}"
+                                               Margin="0,0,0,1"/>
+
+                                    <!-- TE status banner (Closed / Open: ...) -->
+                                    <Border CornerRadius="3" Padding="4,1" Margin="0,1"
+                                            Background="{DynamicResource SidebarSelectedBrush}"
+                                            Visibility="{Binding HasTeStatus, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Text="{Binding TeStatus}" FontSize="9"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+
+                                    <!-- TE-image-derived event chips -->
+                                    <ItemsControl ItemsSource="{Binding TeEvents}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="3" Margin="0,1" Padding="4,1"
+                                                        Background="#5F7A5C">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Title}" FontSize="9" Foreground="White"
+                                                                   TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Time}" FontSize="9" Foreground="White"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- User-created events + /classes-sourced events -->
+                                    <ItemsControl ItemsSource="{Binding Events}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="3" Margin="0,1" Padding="4,1"
+                                                        Background="{DynamicResource PrimaryBrush}">
+                                                    <TextBlock Text="{Binding Title}" FontSize="10" Foreground="White"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -182,6 +219,11 @@
         <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
                 Background="{DynamicResource SidebarBrush}">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
 
                 <!-- Day Events Panel (visible when not editing/adding) -->
                 <Grid>
@@ -247,6 +289,71 @@
 
                     <!-- Status message -->
                     <StackPanel Grid.Row="1">
+
+                        <!-- Taylored Expressions info for the selected day (hours,
+                             status banner, image-derived events). Only rendered
+                             when a day is selected AND it has at least one piece
+                             of TE content. The DataContext is the SelectedDay
+                             CalendarDayCell so we can bind directly to TeHours
+                             etc.; visibility cascades from HasAnyTeContent. -->
+                        <Border DataContext="{Binding SelectedDay}"
+                                Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="12,10" Margin="12,8,12,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasTeHours}"  Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding HasTeStatus}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding HasTeEvents}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="Taylored Expressions" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
+
+                                <!-- Status banner takes priority — when set, hours line is implied. -->
+                                <Border CornerRadius="4" Padding="6,3" Margin="0,0,0,6"
+                                        Background="{DynamicResource SidebarSelectedBrush}"
+                                        HorizontalAlignment="Left"
+                                        Visibility="{Binding HasTeStatus, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="{Binding TeStatus}" FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </Border>
+
+                                <!-- Operating hours line -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                            Visibility="{Binding HasTeHours, Converter={StaticResource BoolToVisConverter}}">
+                                    <TextBlock Text="Hours: " FontSize="12"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBlock Text="{Binding TeHours}" FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <!-- Image-derived events (separate from user / /classes events) -->
+                                <ItemsControl ItemsSource="{Binding TeEvents}"
+                                              Visibility="{Binding HasTeEvents, Converter={StaticResource BoolToVisConverter}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#5F7A5C" CornerRadius="6"
+                                                    Padding="8,6" Margin="0,0,0,4">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="White" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Time}" FontSize="11"
+                                                               Foreground="White" Opacity="0.9"
+                                                               Visibility="{Binding Time, Converter={StaticResource NullToVisConverter}}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <Border Background="{DynamicResource SuccessSoftBrush}" Padding="12,8" Margin="12,8,12,0" CornerRadius="6">
                             <Border.Style>
                                 <Style TargetType="Border">
@@ -278,7 +385,10 @@
                             </TextBlock.Style>
                         </TextBlock>
 
-                        <!-- No events placeholder -->
+                        <!-- "No events" placeholder. Only when there are no user
+                             events AND no TE content on the selected day; otherwise
+                             one of the panels above already gives the user something
+                             to look at. -->
                         <TextBlock Text="No events on this day. Click '+ Add Event' to create one."
                                    Foreground="{DynamicResource TextMutedBrush}" FontSize="13"
                                    HorizontalAlignment="Center" TextAlignment="Center"
@@ -290,6 +400,9 @@
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
                                                 <Condition Binding="{Binding SelectedDayEvents.Count}" Value="0"/>
+                                                <Condition Binding="{Binding SelectedDay.HasTeHours}"  Value="False"/>
+                                                <Condition Binding="{Binding SelectedDay.HasTeStatus}" Value="False"/>
+                                                <Condition Binding="{Binding SelectedDay.HasTeEvents}" Value="False"/>
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </MultiDataTrigger>
@@ -338,6 +451,24 @@
                                                             </Style>
                                                         </TextBlock.Style>
                                                     </TextBlock>
+
+                                                    <!-- Sign-up link for TE-sourced events (events with a registration URL). -->
+                                                    <Button Content="Sign up at Taylored Expressions →"
+                                                            Command="{Binding DataContext.OpenEventUrlCommand, RelativeSource={RelativeSource AncestorType=views:CalendarView}}"
+                                                            CommandParameter="{Binding TeUrl}"
+                                                            HorizontalAlignment="Left"
+                                                            Cursor="Hand"
+                                                            Padding="0" Margin="0,6,0,0"
+                                                            Visibility="{Binding TeUrl, Converter={StaticResource NullToVisConverter}}">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <TextBlock Text="{TemplateBinding Content}"
+                                                                           Foreground="{DynamicResource PrimaryBrush}"
+                                                                           FontSize="11" FontWeight="SemiBold"
+                                                                           TextDecorations="Underline"/>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
                                                 </StackPanel>
 
                                                 <!-- Edit / Delete buttons -->
@@ -518,6 +649,41 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+            </Grid>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- Shop hours (scraped from the TE storefront homepage).   -->
+                <!-- Always visible at the bottom of the sidebar so the user -->
+                <!-- can see when the store is open regardless of what day   -->
+                <!-- they have selected.                                     -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <Border Grid.Row="1"
+                        Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="16,12"
+                        Visibility="{Binding ShopHours.Count, Converter={StaticResource ZeroToVisConverter}, ConverterParameter=Inverse}">
+                    <StackPanel>
+                        <TextBlock Text="TE Shop hours" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
+                        <ItemsControl ItemsSource="{Binding ShopHours}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="84"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Day}"
+                                                   FontSize="12" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Text}"
+                                                   FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
     </Grid>

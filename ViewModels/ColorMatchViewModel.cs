@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MyCraftyStash.Models;
@@ -197,8 +198,16 @@ namespace MyCraftyStash.ViewModels
             bool ExternalOwned(string code)
             {
                 if (string.IsNullOrWhiteSpace(code)) return false;
+                // Substring matching was too loose — chart code "K" (Oreo) would
+                // light up for any owned item whose name contained a "k" (e.g.
+                // "RV1.3 Pink Lotus"). Match on word boundaries instead so a
+                // code only counts when it appears as a whole token. \b around
+                // the escaped code still permits prefix-with-dash forms like
+                // "B-RV1.3" matching chart row "RV1.3", since "-" is a non-word
+                // character and creates a boundary.
+                var pattern = $@"\b{Regex.Escape(code)}\b";
                 return ownedExternalStrings.Any(s =>
-                    s.Contains(code, StringComparison.OrdinalIgnoreCase));
+                    Regex.IsMatch(s, pattern, RegexOptions.IgnoreCase));
             }
 
             _all = matches.Select(m => new ColorMatchRow
@@ -229,10 +238,13 @@ namespace MyCraftyStash.ViewModels
             var q = (SearchText ?? string.Empty).Trim();
             IEnumerable<ColorMatchRow> rows = _all;
 
+            // Owned/Missing key off "either side owned" so a match still
+            // surfaces under Owned if the user has just the external supply
+            // (e.g. 1 OLO) without the TE color, and vice versa.
             rows = Filter switch
             {
-                FilterMode.Owned   => rows.Where(r => r.IsOwnedTe),
-                FilterMode.Missing => rows.Where(r => !r.IsOwnedTe),
+                FilterMode.Owned   => rows.Where(r => r.IsAnyOwned),
+                FilterMode.Missing => rows.Where(r => !r.IsAnyOwned),
                 _ => rows,
             };
 

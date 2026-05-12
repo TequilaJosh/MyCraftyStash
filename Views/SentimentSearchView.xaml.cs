@@ -38,11 +38,29 @@ namespace MyCraftyStash.Views
         
         private void RelatedItem_Click(object sender, MouseButtonEventArgs e)
         {
-            if (sender is FrameworkElement element && 
+            if (sender is FrameworkElement element &&
                 element.Tag is Item item &&
                 DataContext is SentimentSearchViewModel vm)
             {
                 vm.ViewRelatedItemCommand.Execute(item);
+            }
+        }
+
+        private void GalleryThumbnail_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border &&
+                border.Tag is ItemImage clickedImage &&
+                DataContext is SentimentSearchViewModel vm)
+            {
+                vm.SelectGalleryImage(clickedImage);
+            }
+        }
+
+        private void MainImageThumbnail_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is SentimentSearchViewModel vm)
+            {
+                vm.SelectMainImage();
             }
         }
         
