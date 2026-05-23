@@ -30,6 +30,7 @@ namespace MyCraftyStash.ViewModels
         private readonly SemaphoreSlim _loadLock = new SemaphoreSlim(1, 1);
         private List<ItemLookupEntry> _itemLookupList = new();
         private readonly Stack<Item> _navigationHistory = new();
+        private Action? _onBackOverride;
         private bool _imagesChangedDuringEdit;
         private bool _itemsAreDirty = true;
         private bool _suppressSearch;
@@ -792,9 +793,9 @@ namespace MyCraftyStash.ViewModels
         partial void OnNewItemNameChanged(string value)
         {
             if (!string.IsNullOrWhiteSpace(value)) NewItemNameHasError = false;
-            ScheduleDuplicateCheck();
+            _ = ScheduleDuplicateCheck();
         }
-        partial void OnNewItemNumberChanged(string value) => ScheduleDuplicateCheck();
+        partial void OnNewItemNumberChanged(string value) => _ = ScheduleDuplicateCheck();
         partial void OnNewItemPriceChanged(decimal? value)
         {
             NewItemPriceHasError = false;
@@ -821,7 +822,7 @@ namespace MyCraftyStash.ViewModels
         // the warning state set by a later keystroke.
         private CancellationTokenSource? _duplicateCheckCts;
 
-        private async void ScheduleDuplicateCheck()
+        private async Task ScheduleDuplicateCheck()
         {
             if (!IsAddingItem)
             {
@@ -944,7 +945,7 @@ namespace MyCraftyStash.ViewModels
             await LoadItems();
         }
         
-        public async Task SelectItemByIdAsync(int itemId)
+        public async Task SelectItemByIdAsync(int itemId, Action? onBackOverride = null)
         {
             try
             {
@@ -966,6 +967,7 @@ namespace MyCraftyStash.ViewModels
                            ?? await _service.GetItemByIdAsync(itemId);
                 if (item != null)
                 {
+                    _onBackOverride = onBackOverride;
                     await ViewItemDetails(item);
                 }
             }
@@ -1035,12 +1037,8 @@ namespace MyCraftyStash.ViewModels
                 SentimentImages = new ObservableCollection<SentimentImage>();
             }
 
-            // Build individual sentiment lines from the text field
-            var lines = (SelectedItem?.Sentiments ?? string.Empty)
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrWhiteSpace(l))
-                .ToList();
+            // Quote-aware parse so chips containing commas/newlines stay intact across reads.
+            var lines = SentimentService.ParseSentimentLines(SelectedItem?.Sentiments ?? string.Empty);
             SentimentLines = new ObservableCollection<string>(lines);
             IsEditingSentiments = false;
         }
@@ -1168,20 +1166,32 @@ namespace MyCraftyStash.ViewModels
             {
                 var previousItem = _navigationHistory.Pop();
                 await ViewItemDetails(previousItem);
+                return;
             }
-            else
+
+            if (_onBackOverride != null)
             {
+                var cb = _onBackOverride;
+                _onBackOverride = null;
                 IsViewingDetails = false;
                 IsAddingItem = false;
                 IsEditingItem = false;
                 SelectedItem = null;
+                cb();
+                return;
             }
+
+            IsViewingDetails = false;
+            IsAddingItem = false;
+            IsEditingItem = false;
+            SelectedItem = null;
         }
 
         [RelayCommand]
         public void BackToList()
         {
             _navigationHistory.Clear();
+            _onBackOverride = null;
             IsViewingDetails = false;
             IsAddingItem = false;
             IsEditingItem = false;

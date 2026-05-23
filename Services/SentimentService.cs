@@ -124,21 +124,33 @@ namespace MyCraftyStash.Services
         }
 
 
-        public async Task<List<SentimentImage>> SearchSentimentsAsync(string searchText)
+        public Task<List<SentimentImage>> SearchSentimentsAsync(string searchText)
+            => SearchSentimentsAsync(searchText, insidersOnly: false);
+
+        public async Task<List<SentimentImage>> SearchSentimentsAsync(string searchText, bool insidersOnly)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(searchText))
                     return new List<SentimentImage>();
-                
+
                 using var context = CreateContext();
                 var searchVariants = GetSearchVariants(searchText);
                 var normalizedSearch = NormalizeText(searchText);
-                
+
                 var baseQuery = context.SentimentImages
                     .AsNoTracking()
                     .Include(s => s.Item)
                     .Where(s => s.SearchText != null);
+
+                if (insidersOnly)
+                {
+                    baseQuery = baseQuery.Where(s =>
+                        s.Item != null && (
+                            (s.Item.Type.ToLower() == "cardstock" && s.Item.Subtype != null && s.Item.Subtype.ToLower().Contains("insider"))
+                            || s.Item.Name.ToLower().Contains("inside scoop")
+                        ));
+                }
                 
                 if (searchVariants.Count <= 1)
                 {
@@ -244,11 +256,14 @@ namespace MyCraftyStash.Services
         /// followed by the remaining sentiments of that set.
         /// Sets are ordered alphabetically by item name.
         /// </summary>
-        public async Task<List<SentimentImage>> SearchSentimentsExpandedAsync(string searchText)
+        public Task<List<SentimentImage>> SearchSentimentsExpandedAsync(string searchText)
+            => SearchSentimentsExpandedAsync(searchText, insidersOnly: false);
+
+        public async Task<List<SentimentImage>> SearchSentimentsExpandedAsync(string searchText, bool insidersOnly)
         {
             try
             {
-                var matched = await SearchSentimentsAsync(searchText);
+                var matched = await SearchSentimentsAsync(searchText, insidersOnly);
                 if (matched.Count == 0) return matched;
 
                 var matchedItemIds  = matched.Select(s => s.ItemId).Distinct().ToHashSet();
@@ -416,6 +431,70 @@ namespace MyCraftyStash.Services
         }
         
         
+        /// <summary>
+        /// Splits the stored Sentiments text into one chip per non-empty line, but
+        /// treats a `"..."` quoted span as a single chip so chips containing commas
+        /// or newlines round-trip without re-splitting. Quote characters are stripped
+        /// from the returned chip text.
+        /// </summary>
+        public static List<string> ParseSentimentLines(string sentimentsText)
+        {
+            if (string.IsNullOrWhiteSpace(sentimentsText))
+                return new List<string>();
+
+            return SplitRespectingQuotes(sentimentsText, new[] { '\r', '\n' })
+                .Select(s => s.Trim().Trim('"').Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Inverse of <see cref="ParseSentimentLines"/>: re-wraps any chip whose text
+        /// contains the line/comma separators in `"..."` so a later parse keeps it
+        /// intact. Lines join with <see cref="Environment.NewLine"/>.
+        /// </summary>
+        public static string SerializeSentimentLines(IEnumerable<string> lines)
+        {
+            if (lines == null) return string.Empty;
+            var sep = new[] { '\r', '\n', ',', ';', '|' };
+            var encoded = lines
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .Select(l =>
+                {
+                    var trimmed = l.Trim().Trim('"').Trim();
+                    return trimmed.IndexOfAny(sep) >= 0 ? "\"" + trimmed + "\"" : trimmed;
+                })
+                .Where(l => !string.IsNullOrWhiteSpace(l));
+            return string.Join(Environment.NewLine, encoded);
+        }
+
+        /// <summary>
+        /// Split that honors `"..."` quoted spans (their inner separators are skipped).
+        /// </summary>
+        private static IEnumerable<string> SplitRespectingQuotes(string text, char[] separators)
+        {
+            if (string.IsNullOrEmpty(text)) yield break;
+            var sepSet = new HashSet<char>(separators);
+            var sb = new System.Text.StringBuilder();
+            bool inQuotes = false;
+            foreach (var ch in text)
+            {
+                if (ch == '"')
+                {
+                    inQuotes = !inQuotes;
+                    sb.Append(ch);
+                    continue;
+                }
+                if (!inQuotes && sepSet.Contains(ch))
+                {
+                    if (sb.Length > 0) { yield return sb.ToString(); sb.Clear(); }
+                    continue;
+                }
+                sb.Append(ch);
+            }
+            if (sb.Length > 0) yield return sb.ToString();
+        }
+
         public static List<string> ParseSentimentsList(string sentimentsText)
         {
             if (string.IsNullOrWhiteSpace(sentimentsText))
@@ -440,19 +519,25 @@ namespace MyCraftyStash.Services
         }
         
         
-        public async Task<List<Item>> GetItemsWithSentimentsAsync()
+        public Task<List<Item>> GetItemsWithSentimentsAsync() => GetItemsWithSentimentsAsync(insidersOnly: false);
+
+        public async Task<List<Item>> GetItemsWithSentimentsAsync(bool insidersOnly)
         {
             try
             {
                 using var context = CreateContext();
-                return await context.Items
-                    .Where(i => !string.IsNullOrEmpty(i.Sentiments))
-                    .OrderBy(i => i.Name)
-                    .ToListAsync();
+                var query = context.Items.Where(i => !string.IsNullOrEmpty(i.Sentiments));
+                if (insidersOnly)
+                {
+                    query = query.Where(i =>
+                        (i.Type.ToLower() == "cardstock" && i.Subtype != null && i.Subtype.ToLower().Contains("insider"))
+                        || i.Name.ToLower().Contains("inside scoop"));
+                }
+                return await query.OrderBy(i => i.Name).ToListAsync();
             }
             catch (Exception ex)
             {
-                LoggingService.LogDatabaseError(ex, "GetItemsWithSentimentsAsync");
+                LoggingService.LogDatabaseError(ex, $"GetItemsWithSentimentsAsync (insidersOnly: {insidersOnly})");
                 throw;
             }
         }

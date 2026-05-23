@@ -564,6 +564,32 @@
                 <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
             </Style>
 
+            <!--
+                SelectableTextBlock: a read-only TextBox styled to read like a TextBlock,
+                so item names / item numbers / sentiments / notes / addresses can be
+                selected and copied. Discovery cue is the IBeam cursor; right-click
+                exposes Copy / Select All.
+            -->
+            <Style x:Key="SelectableTextBlock" TargetType="TextBox">
+                <Setter Property="IsReadOnly" Value="True"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Cursor" Value="IBeam"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+                <Setter Property="IsReadOnlyCaretVisible" Value="False"/>
+                <Setter Property="ContextMenu">
+                    <Setter.Value>
+                        <ContextMenu>
+                            <MenuItem Header="Copy" Command="ApplicationCommands.Copy"/>
+                            <MenuItem Header="Select All" Command="ApplicationCommands.SelectAll"/>
+                        </ContextMenu>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Stat number / label -->
             <Style x:Key="StatLabel" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>

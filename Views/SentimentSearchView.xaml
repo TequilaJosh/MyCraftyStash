@@ -16,14 +16,66 @@
         <Border Grid.Row="0" Background="{DynamicResource BackgroundBrush}" Padding="32,22,32,14">
             <StackPanel>
                 <StackPanel Visibility="{Binding IsViewingItem, Converter={StaticResource InverseBoolToVisConverter}}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
-                        <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
-                        <TextBlock Style="{StaticResource Breadcrumb}" Text="Sentiment search"/>
+                    <!-- Sentiment mode header -->
+                    <StackPanel Visibility="{Binding IsInsiderMode, Converter={StaticResource InverseBoolToVisConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="Sentiment search"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="Sentiment search" Margin="0,4,0,0"/>
+                        <TextBlock Style="{StaticResource PageSubtitle}"
+                                   Text="Find the perfect stamp set by sentiment phrase."/>
                     </StackPanel>
-                    <TextBlock Style="{StaticResource PageTitle}" Text="Sentiment search" Margin="0,4,0,0"/>
-                    <TextBlock Style="{StaticResource PageSubtitle}"
-                               Text="Find the perfect stamp set by sentiment phrase."/>
+                    <!-- Insider mode header -->
+                    <StackPanel Visibility="{Binding IsInsiderMode, Converter={StaticResource BoolToVisConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="My Crafty Stash"/>
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="  /  "/>
+                            <TextBlock Style="{StaticResource Breadcrumb}" Text="Insider search"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="Insider search" Margin="0,4,0,0"/>
+                        <TextBlock Style="{StaticResource PageSubtitle}"
+                                   Text="Search the phrases printed on Insider cardstock and Inside Scoop items."/>
+                    </StackPanel>
+
+                    <!-- Mode tabs: Sentiment / Insider -->
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Sentiment Search"
+                                Command="{Binding SelectSentimentTabCommand}"
+                                Padding="14,8" Margin="0,0,8,0"
+                                BorderThickness="0,0,0,2" Background="Transparent"
+                                Foreground="{DynamicResource TextBrush}" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsInsiderMode}" Value="False">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="Insider Search"
+                                Command="{Binding SelectInsiderTabCommand}"
+                                Padding="14,8"
+                                BorderThickness="0,0,0,2" Background="Transparent"
+                                Foreground="{DynamicResource TextBrush}" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsInsiderMode}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Visibility="{Binding IsViewingItem, Converter={StaticResource BoolToVisConverter}}">
                     <StackPanel Orientation="Horizontal">

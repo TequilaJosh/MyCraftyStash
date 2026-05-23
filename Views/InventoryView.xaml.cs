@@ -387,16 +387,14 @@ namespace MyCraftyStash.Views
 
         if (DataContext is not MyCraftyStash.ViewModels.InventoryViewModel vm || vm.SelectedItem == null) return;
 
-        // Remove the line from the item's Sentiments text field
-        var updatedLines = (vm.SelectedItem.Sentiments ?? string.Empty)
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim())
-            .Where(l => !string.IsNullOrWhiteSpace(l) &&
-                        !string.Equals(l, sentLine, StringComparison.OrdinalIgnoreCase))
+        // Quote-aware: chips with commas/newlines are preserved as one entry.
+        var updatedLines = MyCraftyStash.Services.SentimentService
+            .ParseSentimentLines(vm.SelectedItem.Sentiments ?? string.Empty)
+            .Where(l => !string.Equals(l, sentLine, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         vm.SelectedItem.Sentiments = updatedLines.Count > 0
-            ? string.Join(Environment.NewLine, updatedLines)
+            ? MyCraftyStash.Services.SentimentService.SerializeSentimentLines(updatedLines)
             : null;
 
         try
@@ -432,14 +430,10 @@ namespace MyCraftyStash.Views
             if (DataContext is not InventoryViewModel vm || vm.SelectedItem == null) return;
 
             var raw = vm.EditingSentimentsText ?? string.Empty;
-            var lines = raw
-                .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrEmpty(l))
-                .ToList();
+            var lines = MyCraftyStash.Services.SentimentService.ParseSentimentLines(raw);
 
             vm.SelectedItem.Sentiments = lines.Count > 0
-                ? string.Join(Environment.NewLine, lines)
+                ? MyCraftyStash.Services.SentimentService.SerializeSentimentLines(lines)
                 : null;
 
             try

@@ -174,6 +174,18 @@ namespace MyCraftyStash.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<UnsnippedSetResult> _unsnippedSets = new();
+
+        /// <summary>True when the Insider tab is active. Filters all searches/unsnipped-set
+        /// discovery to Insider cardstock items only.</summary>
+        [ObservableProperty]
+        private bool _isInsiderMode;
+
+        public bool IsSentimentMode => !IsInsiderMode;
+
+        partial void OnIsInsiderModeChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsSentimentMode));
+        }
         
         private double _imageSelectionX;
         private double _imageSelectionY;
@@ -204,8 +216,8 @@ namespace MyCraftyStash.ViewModels
                 IsViewingUnsnipped = false;
 
                 var results = ExpandBySet
-                    ? await _sentimentService.SearchSentimentsExpandedAsync(SearchText)
-                    : await _sentimentService.SearchSentimentsAsync(SearchText);
+                    ? await _sentimentService.SearchSentimentsExpandedAsync(SearchText, IsInsiderMode)
+                    : await _sentimentService.SearchSentimentsAsync(SearchText, IsInsiderMode);
                 var displayResults = results.Select(s =>
                 {
                     var result = new SentimentSearchResult
@@ -243,7 +255,7 @@ namespace MyCraftyStash.ViewModels
             IsLoading = true;
             try
             {
-                var items = await _sentimentService.GetItemsWithSentimentsAsync();
+                var items = await _sentimentService.GetItemsWithSentimentsAsync(IsInsiderMode);
                 var counts = await _sentimentService.GetSentimentCountsByItemAsync();
 
                 var results = new List<UnsnippedSetResult>();
@@ -285,7 +297,9 @@ namespace MyCraftyStash.ViewModels
         {
             if (result == null) return;
             _mainVm.NavigateToInventoryCommand.Execute(null);
-            await _mainVm.InventoryVM.SelectItemByIdAsync(result.ItemId);
+            await _mainVm.InventoryVM.SelectItemByIdAsync(
+                result.ItemId,
+                onBackOverride: () => _mainVm.NavigateToSentimentSearchCommand.Execute(null));
         }
 
         [RelayCommand]
@@ -398,6 +412,37 @@ namespace MyCraftyStash.ViewModels
         [RelayCommand]
         private void GoBack()
         {
+            IsViewingItem = false;
+            CurrentItem = null;
+            CurrentDisplayImage = null;
+            CurrentItemImages.Clear();
+            CurrentItemRelated.Clear();
+            CurrentItemSentiments.Clear();
+        }
+
+        [RelayCommand]
+        private void SelectSentimentTab()
+        {
+            if (!IsInsiderMode) return;
+            IsInsiderMode = false;
+            ResetForTabSwitch();
+        }
+
+        [RelayCommand]
+        private void SelectInsiderTab()
+        {
+            if (IsInsiderMode) return;
+            IsInsiderMode = true;
+            ResetForTabSwitch();
+        }
+
+        private void ResetForTabSwitch()
+        {
+            SearchText = string.Empty;
+            _lastSearchText = null;
+            Sentiments.Clear();
+            UnsnippedSets.Clear();
+            IsViewingUnsnipped = false;
             IsViewingItem = false;
             CurrentItem = null;
             CurrentDisplayImage = null;
@@ -694,7 +739,9 @@ namespace MyCraftyStash.ViewModels
             if (CurrentItem == null) return;
             
             _mainVm.NavigateToInventoryCommand.Execute(null);
-            await _mainVm.InventoryVM.SelectItemByIdAsync(CurrentItem.Id);
+            await _mainVm.InventoryVM.SelectItemByIdAsync(
+                CurrentItem.Id,
+                onBackOverride: () => _mainVm.NavigateToSentimentSearchCommand.Execute(null));
         }
     }
 }
