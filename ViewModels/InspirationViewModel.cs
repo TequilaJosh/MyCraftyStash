@@ -534,49 +534,56 @@ namespace MyCraftyStash.ViewModels
             OnPropertyChanged(nameof(CanConfirmAddItem));
         }
 
-        partial void OnSearchTextChanged(string value) => ApplyFiltersAsync();
-        partial void OnFilterTypeChanged(string? value) => ApplyFiltersAsync();
-        partial void OnFilterThemeChanged(string? value) => ApplyFiltersAsync();
+        partial void OnSearchTextChanged(string value) => _ = ApplyFiltersAsync();
+        partial void OnFilterTypeChanged(string? value) => _ = ApplyFiltersAsync();
+        partial void OnFilterThemeChanged(string? value) => _ = ApplyFiltersAsync();
 
-        private async void ApplyFiltersAsync()
+        private async Task ApplyFiltersAsync()
         {
-            if (_allImages.Count == 0)
+            try
             {
-                Images = new ObservableCollection<InspirationEntry>();
-                return;
-            }
-
-            bool hasTypeOrTheme = !string.IsNullOrWhiteSpace(FilterType) || !string.IsNullOrWhiteSpace(FilterTheme);
-
-            if (!hasTypeOrTheme && string.IsNullOrWhiteSpace(SearchText))
-            {
-                Images = new ObservableCollection<InspirationEntry>(_allImages);
-                return;
-            }
-
-            var filtered = _allImages.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                var search = SearchText.ToLower();
-                filtered = filtered.Where(i => i.Title?.ToLower().Contains(search) ?? false);
-            }
-
-            if (hasTypeOrTheme)
-            {
-                try
+                if (_allImages.Count == 0)
                 {
-                    var matchingImageIds = await _service.GetInspirationImageIdsByItemFilterAsync(FilterType, FilterTheme);
-                    var matchSet = new HashSet<int>(matchingImageIds);
-                    filtered = filtered.Where(i => matchSet.Contains(i.Id));
+                    Images = new ObservableCollection<InspirationEntry>();
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    LoggingService.LogError(ex);
-                }
-            }
 
-            Images = new ObservableCollection<InspirationEntry>(filtered);
+                bool hasTypeOrTheme = !string.IsNullOrWhiteSpace(FilterType) || !string.IsNullOrWhiteSpace(FilterTheme);
+
+                if (!hasTypeOrTheme && string.IsNullOrWhiteSpace(SearchText))
+                {
+                    Images = new ObservableCollection<InspirationEntry>(_allImages);
+                    return;
+                }
+
+                var filtered = _allImages.AsEnumerable();
+
+                if (!string.IsNullOrWhiteSpace(SearchText))
+                {
+                    var search = SearchText.ToLower();
+                    filtered = filtered.Where(i => i.Title?.ToLower().Contains(search) ?? false);
+                }
+
+                if (hasTypeOrTheme)
+                {
+                    try
+                    {
+                        var matchingImageIds = await _service.GetInspirationImageIdsByItemFilterAsync(FilterType, FilterTheme);
+                        var matchSet = new HashSet<int>(matchingImageIds);
+                        filtered = filtered.Where(i => matchSet.Contains(i.Id));
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError(ex);
+                    }
+                }
+
+                Images = new ObservableCollection<InspirationEntry>(filtered);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "InspirationViewModel.ApplyFiltersAsync");
+            }
         }
 
         // ── Board navigation ─────────────────────────────────────────────────
@@ -634,7 +641,7 @@ namespace MyCraftyStash.ViewModels
                 .Where(b => b.CoverImageId > 0)
                 .Select(b => b.CoverImageId));
 
-            ApplyFiltersAsync();
+            _ = ApplyFiltersAsync();
 
             // Update breadcrumb
             await UpdateBreadcrumbAsync(boardId);
@@ -1104,7 +1111,7 @@ namespace MyCraftyStash.ViewModels
             }
         }
 
-        private async void LoadSelectableItemsForAdd()
+        private async Task LoadSelectableItemsForAdd()
         {
             try
             {
@@ -1751,10 +1758,17 @@ namespace MyCraftyStash.ViewModels
             return sel.Count > 0 ? string.Join(",", sel) : null;
         }
 
-        public async void NavigateToItem(int itemId)
+        public async Task NavigateToItem(int itemId)
         {
-            _mainVm.NavigateToInventoryCommand.Execute(null);
-            await _mainVm.InventoryVM.SelectItemByIdAsync(itemId);
+            try
+            {
+                _mainVm.NavigateToInventoryCommand.Execute(null);
+                await _mainVm.InventoryVM.SelectItemByIdAsync(itemId);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "InspirationViewModel.NavigateToItem");
+            }
         }
     }
 }

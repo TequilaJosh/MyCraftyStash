@@ -184,7 +184,11 @@ namespace MyCraftyStash.Services
                 uriBitmap.Freeze();
                 return uriBitmap;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "InspirationThumbnailCacheService.DecodeBase64ToBitmap");
+                return null;
+            }
         }
     }
 }

@@ -204,7 +204,7 @@ namespace MyCraftyStash.Views
             if (sender is Border border && border.Tag is int itemId)
             {
                 if (DataContext is InspirationViewModel vm)
-                    vm.NavigateToItem(itemId);
+                    _ = vm.NavigateToItem(itemId);
             }
         }
 

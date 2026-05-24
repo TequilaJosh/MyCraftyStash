@@ -22,7 +22,9 @@ namespace MyCraftyStash.Views
 
             // Drag-anywhere by holding the left mouse button. Window has no
             // chrome because of WindowStyle=None / AllowsTransparency=true.
-            MouseLeftButtonDown += (_, _) => { try { DragMove(); } catch { } };
+            // DragMove throws if the button is no longer down by the time we call it
+            // (mouse release races the event) — swallow that specific case silently.
+            MouseLeftButtonDown += (_, _) => { try { DragMove(); } catch (InvalidOperationException) { } };
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();

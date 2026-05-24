@@ -81,8 +81,8 @@ namespace MyCraftyStash.Services
             if (File.Exists(setupExe)) return setupExe;
 
             var msiFiles = Directory.GetFiles(NetworkInstallPath, "*.msi");
-            if (msiFiles.Length > 0)
-                return msiFiles.OrderByDescending(f => new FileInfo(f).LastWriteTime).First();
+            var newestMsi = msiFiles.OrderByDescending(f => new FileInfo(f).LastWriteTime).FirstOrDefault();
+            if (newestMsi != null) return newestMsi;
 
             var exeFiles = Directory.GetFiles(NetworkInstallPath, "*.exe")
                 .Where(f => Path.GetFileName(f).Contains("setup", StringComparison.OrdinalIgnoreCase) ||
@@ -90,8 +90,8 @@ namespace MyCraftyStash.Services
                             !Path.GetFileName(f).Equals("MyCraftyStash.exe", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
-            if (exeFiles.Length > 0)
-                return exeFiles.OrderByDescending(f => new FileInfo(f).LastWriteTime).First();
+            var newestExe = exeFiles.OrderByDescending(f => new FileInfo(f).LastWriteTime).FirstOrDefault();
+            if (newestExe != null) return newestExe;
 
             var appExe = Path.Combine(NetworkInstallPath, "MyCraftyStash.exe");
             if (File.Exists(appExe)) return appExe;

@@ -145,7 +145,7 @@ namespace MyCraftyStash.Services
                 var obj = ColorConverter.ConvertFromString(trimmed);
                 if (obj is Color c) { color = c; return true; }
             }
-            catch { }
+            catch { /* TryParse pattern: malformed hex → return false */ }
             return false;
         }
     }

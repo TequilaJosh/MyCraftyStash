@@ -185,22 +185,37 @@ namespace MyCraftyStash.Views
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
-                if (source.StartsWith("data:") || (source.Contains(',') && !source.StartsWith("http")))
+                System.IO.MemoryStream? ms = null;
+                try
                 {
-                    var commaIdx = source.IndexOf(',');
-                    var data  = commaIdx >= 0 ? source[(commaIdx + 1)..] : source;
-                    var bytes = Convert.FromBase64String(data);
-                    bmp.StreamSource = new System.IO.MemoryStream(bytes);
+                    if (source.StartsWith("data:") || (source.Contains(',') && !source.StartsWith("http")))
+                    {
+                        var commaIdx = source.IndexOf(',');
+                        var data  = commaIdx >= 0 ? source[(commaIdx + 1)..] : source;
+                        var bytes = Convert.FromBase64String(data);
+                        ms = new System.IO.MemoryStream(bytes);
+                        bmp.StreamSource = ms;
+                    }
+                    else
+                    {
+                        bmp.UriSource = new Uri(source, UriKind.Absolute);
+                    }
+                    bmp.EndInit();
+                    bmp.Freeze();
                 }
-                else
+                finally
                 {
-                    bmp.UriSource = new Uri(source, UriKind.Absolute);
+                    // OnLoad caches the bitmap into memory at EndInit, so we own the stream
+                    // and can safely release it once decoding has finished.
+                    ms?.Dispose();
                 }
-                bmp.EndInit();
-                bmp.Freeze();
                 PreviewImage.Source = bmp;
             }
-            catch { PreviewImage.Source = null; }
+            catch (Exception ex)
+            {
+                PreviewImage.Source = null;
+                LoggingService.LogError(ex, "ItemLookupDialog.ShowMainImage");
+            }
         }
 
         private void BuildThumbStrip(List<string> images)
@@ -232,22 +247,34 @@ namespace MyCraftyStash.Views
                     bmp.BeginInit();
                     bmp.CacheOption      = BitmapCacheOption.OnLoad;
                     bmp.DecodePixelWidth = 96;
-                    if (src.StartsWith("data:") || (src.Contains(',') && !src.StartsWith("http")))
+                    System.IO.MemoryStream? ms = null;
+                    try
                     {
-                        var commaIdx = src.IndexOf(',');
-                        var data  = commaIdx >= 0 ? src[(commaIdx + 1)..] : src;
-                        var bytes = Convert.FromBase64String(data);
-                        bmp.StreamSource = new System.IO.MemoryStream(bytes);
+                        if (src.StartsWith("data:") || (src.Contains(',') && !src.StartsWith("http")))
+                        {
+                            var commaIdx = src.IndexOf(',');
+                            var data  = commaIdx >= 0 ? src[(commaIdx + 1)..] : src;
+                            var bytes = Convert.FromBase64String(data);
+                            ms = new System.IO.MemoryStream(bytes);
+                            bmp.StreamSource = ms;
+                        }
+                        else
+                        {
+                            bmp.UriSource = new Uri(src, UriKind.Absolute);
+                        }
+                        bmp.EndInit();
+                        bmp.Freeze();
                     }
-                    else
+                    finally
                     {
-                        bmp.UriSource = new Uri(src, UriKind.Absolute);
+                        ms?.Dispose();
                     }
-                    bmp.EndInit();
-                    bmp.Freeze();
                     img.Source = bmp;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError(ex, "ItemLookupDialog.BuildThumbStrip");
+                }
                 border.Child = img;
                 border.MouseLeftButtonUp += (_, _) =>
                 {

@@ -62,7 +62,11 @@ namespace MyCraftyStash.Services
                 bmp.Freeze();
                 return bmp;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"ThumbnailCacheService.TryLoadFromDisk (id: {itemId})");
+                return null;
+            }
         }
 
         private static void SaveToDisk(int itemId, string imageUrl, BitmapImage bmp)
@@ -73,7 +77,9 @@ namespace MyCraftyStash.Services
                 var path = DiskCachePath(itemId, QuickHash(imageUrl));
                 if (File.Exists(path)) return; // already saved
 
-                // Delete any stale variants for this item (old hashes, old .png files)
+                // Delete any stale variants for this item (old hashes, old .png files).
+                // Per-file failures here are normal (file in use by another decode) — swallow
+                // them rather than abandoning the whole save.
                 foreach (var stale in Directory.GetFiles(DiskCacheDir, $"{itemId}_*"))
                     try { File.Delete(stale); } catch { }
 
@@ -82,7 +88,10 @@ namespace MyCraftyStash.Services
                 using var fs = File.OpenWrite(path);
                 encoder.Save(fs);
             }
-            catch { /* non-fatal */ }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"ThumbnailCacheService.SaveToDisk (id: {itemId})");
+            }
         }
 
         // ── Synchronous get (cache-hit only, no DB) ─────────────────────────
@@ -143,7 +152,8 @@ namespace MyCraftyStash.Services
                 var bitmap = await Task.Run(() => TryLoadFromDisk(itemId, imageUrl))
                              ?? await Task.Run(() => DecodeBase64ToBitmap(imageUrl, ThumbnailWidth));
 
-                // Persist to disk if we had to decode from base64
+                // Persist to disk if we had to decode from base64. SaveToDisk catches its
+                // own exceptions and logs, so the fire-and-forget here can't escape unobserved.
                 if (bitmap != null)
                     _ = Task.Run(() => SaveToDisk(itemId, imageUrl, bitmap));
 
@@ -293,7 +303,10 @@ namespace MyCraftyStash.Services
                         File.Delete(f);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"ThumbnailCacheService.InvalidateItem disk-cleanup (id: {itemId})");
+            }
         }
 
         public static void ClearCache()
@@ -333,7 +346,11 @@ namespace MyCraftyStash.Services
                 uriBitmap.Freeze();
                 return uriBitmap;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "ThumbnailCacheService.DecodeBase64ToBitmap");
+                return null;
+            }
         }
     }
 }

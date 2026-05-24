@@ -33,7 +33,7 @@ namespace MyCraftyStash.Controls
         public static int GetItemId(DependencyObject obj) => (int)obj.GetValue(ItemIdProperty);
         public static void SetItemId(DependencyObject obj, int value) => obj.SetValue(ItemIdProperty, value);
 
-        private static async void OnItemIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnItemIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is not Image img) return;
             if (e.NewValue is not int id || id <= 0)
@@ -51,12 +51,27 @@ namespace MyCraftyStash.Controls
             }
 
             // Cache miss: clear current image (in case the row was recycled from another id),
-            // load asynchronously, then re-check that the row still wants this id before
-            // assigning. ItemsControl recycles Image instances during scroll/refilter.
+            // then load asynchronously. Wrapped so exceptions can't escape into the
+            // DP-callback void return and tear down the visual tree.
             img.Source = null;
-            var bmp = await ThumbnailCacheService.LoadThumbnailAsync(id);
-            if (GetItemId(img) == id)
-                img.Source = bmp;
+            _ = LoadAsync(img, id);
+        }
+
+        private static async Task LoadAsync(Image img, int id)
+        {
+            try
+            {
+                var bmp = await ThumbnailCacheService.LoadThumbnailAsync(id);
+                // Re-check the attached id — ItemsControl recycles Image instances
+                // during scroll/refilter, so an in-flight load for an old id must
+                // not overwrite a freshly bound image.
+                if (GetItemId(img) == id)
+                    img.Source = bmp;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, $"ThumbnailLoader.LoadAsync id={id}");
+            }
         }
     }
 }
