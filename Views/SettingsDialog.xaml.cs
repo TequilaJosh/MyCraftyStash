@@ -69,7 +69,12 @@ namespace MyCraftyStash.Views
             LoadTrackedItemsTab();
             await LoadProjectTrackedItemsTabAsync();
             LoadCatalogSourcesTab();
+            LoadBulkRenameTab();
             _isLoadingSettings = false;
+            // After the loading guard drops, populate the Bulk Rename Old-value
+            // combo for the initial field selection (the SelectionChanged
+            // handler suppressed itself while _isLoadingSettings was true).
+            await RefreshBulkRenameOldValuesAsync();
         }
 
         // ── Catalog Sources tab ──────────────────────────────────────────────
@@ -935,6 +940,420 @@ namespace MyCraftyStash.Views
                 MessageBox.Show($"Error saving project tracked items: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        // ── Bulk Rename tab ──────────────────────────────────────────────────
+        // Mirrors JandH's Bulk Rename UI, ported via JandH.Core's
+        // BulkRenameService. The service does the cross-table SQL UPDATE on
+        // the inventory DB; the suggestions list + post-rename sync read and
+        // write MCS's settings.db via ConfigStore (the JandH-side path-based
+        // ConfigPaths is empty on this app).
+
+        // SelectionChanged on the field combo fires while we're seeding it
+        // (Items.Add → SelectedIndex change), so suppress the refresh handler
+        // for the seeding pass.
+        private bool _bulkRenameLoading;
+
+        private void LoadBulkRenameTab()
+        {
+            _bulkRenameLoading = true;
+            BulkRenameFieldCombo.Items.Clear();
+            foreach (var f in BulkRenameService.Fields)
+                BulkRenameFieldCombo.Items.Add(f.Label);
+            BulkRenameFieldCombo.SelectedIndex = 0;
+            _bulkRenameLoading = false;
+        }
+
+        private BulkRenameField? GetSelectedBulkRenameField()
+        {
+            if (BulkRenameFieldCombo.SelectedItem is not string label) return null;
+            foreach (var f in BulkRenameService.Fields)
+                if (f.Label == label) return f.Field;
+            return null;
+        }
+
+        private async void BulkRenameField_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings || _bulkRenameLoading) return;
+            await RefreshBulkRenameOldValuesAsync();
+        }
+
+        private async void BulkRenameParentType_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings || _bulkRenameLoading) return;
+            await RefreshBulkRenameOldValuesAsync();
+        }
+
+        private void BulkRenameOld_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            BulkRenameStatus.Text = string.Empty;
+        }
+
+        private async Task RefreshBulkRenameOldValuesAsync()
+        {
+            var field = GetSelectedBulkRenameField();
+            if (field == null) return;
+
+            BulkRenameOldCombo.Items.Clear();
+            BulkRenameNewCombo.Items.Clear();
+            BulkRenameStatus.Text = string.Empty;
+
+            string? parent = null;
+
+            if (field == BulkRenameField.Subtype)
+            {
+                // (Re)populate parent types from the DB — only show types that
+                // actually have items with a subtype, so every pick yields a
+                // non-empty Old-value list.
+                _bulkRenameLoading = true;
+                try
+                {
+                    var preserved = BulkRenameParentTypeCombo.SelectedItem as string;
+                    BulkRenameParentTypeCombo.Items.Clear();
+                    var typesWithSubs = await BulkRenameService.GetTypesWithSubtypesAsync();
+                    foreach (var t in typesWithSubs)
+                        BulkRenameParentTypeCombo.Items.Add(t);
+                    BulkRenameParentTypeRow.Visibility = Visibility.Visible;
+
+                    if (preserved != null && BulkRenameParentTypeCombo.Items.Contains(preserved))
+                        BulkRenameParentTypeCombo.SelectedItem = preserved;
+                    else if (BulkRenameParentTypeCombo.Items.Count > 0)
+                        BulkRenameParentTypeCombo.SelectedIndex = 0;
+                }
+                finally
+                {
+                    _bulkRenameLoading = false;
+                }
+
+                parent = BulkRenameParentTypeCombo.SelectedItem as string;
+            }
+            else
+            {
+                BulkRenameParentTypeRow.Visibility = Visibility.Collapsed;
+            }
+
+            // Populate Old-value combo with distinct values currently in the
+            // DB for the chosen field (scoped by parent type for Subtype).
+            try
+            {
+                var existing = await BulkRenameService.GetExistingValuesAsync(field.Value, parent);
+                foreach (var v in existing)
+                    BulkRenameOldCombo.Items.Add(v);
+
+                if (existing.Count == 0)
+                {
+                    BulkRenameStatus.Text = field == BulkRenameField.Subtype && parent != null
+                        ? $"No items currently use a subtype under \"{parent}\"."
+                        : "No items currently use this field.";
+                }
+
+                // New-value suggestions — pull canonical lists from
+                // ConfigStore so users can merge into an existing entry.
+                IEnumerable<string> suggestions = field switch
+                {
+                    BulkRenameField.Type          => LoadLinesFromFile(ConfigStore.Types),
+                    BulkRenameField.Location      => LoadLinesFromFile(ConfigStore.Locations),
+                    BulkRenameField.Theme         => LoadLinesFromFile(ConfigStore.Themes),
+                    BulkRenameField.PurchasedFrom => LoadLinesFromFile(ConfigStore.PurchasedFrom),
+                    BulkRenameField.Subtype       => parent != null
+                                                        ? UserSettingsService.GetSubtypesForType(parent)
+                                                        : Enumerable.Empty<string>(),
+                    _ => Enumerable.Empty<string>(),
+                };
+                foreach (var s in suggestions)
+                    BulkRenameNewCombo.Items.Add(s);
+            }
+            catch (Exception ex)
+            {
+                BulkRenameStatus.Text = $"Could not load values: {ex.Message}";
+            }
+        }
+
+        private async void BulkRenamePreview_Click(object sender, RoutedEventArgs e)
+        {
+            var field = GetSelectedBulkRenameField();
+            if (field == null) return;
+            var oldValue = (BulkRenameOldCombo.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(oldValue))
+            {
+                BulkRenameStatus.Text = "Pick an old value to rename.";
+                return;
+            }
+            string? parent = field == BulkRenameField.Subtype ? BulkRenameParentTypeCombo.SelectedItem as string : null;
+
+            try
+            {
+                BulkRenameStatus.Text = "Counting…";
+                var count = await BulkRenameService.PreviewAsync(field.Value, oldValue, parent);
+                BulkRenameStatus.Text = $"{count} item(s) would be updated.";
+            }
+            catch (Exception ex)
+            {
+                BulkRenameStatus.Text = $"Preview failed: {ex.Message}";
+            }
+        }
+
+        private async void BulkRenameShowItems_Click(object sender, RoutedEventArgs e)
+        {
+            var field = GetSelectedBulkRenameField();
+            if (field == null) return;
+            var oldValue = (BulkRenameOldCombo.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(oldValue))
+            {
+                BulkRenameStatus.Text = "Pick an old value first.";
+                return;
+            }
+            string? parent = field == BulkRenameField.Subtype ? BulkRenameParentTypeCombo.SelectedItem as string : null;
+
+            try
+            {
+                BulkRenameStatus.Text = "Loading items…";
+                var items = await BulkRenameService.PreviewItemsAsync(field.Value, oldValue, parent);
+                BulkRenameStatus.Text = $"{items.Count} item(s) would be updated.";
+
+                var fieldLabel = BulkRenameService.Fields.First(f => f.Field == field).Label;
+                var title = $"Items using {fieldLabel} = \"{oldValue}\"" +
+                            (parent != null ? $"  (type: {parent})" : string.Empty);
+                ShowAffectedItemsDialog(title, items);
+            }
+            catch (Exception ex)
+            {
+                BulkRenameStatus.Text = $"Could not load items: {ex.Message}";
+            }
+        }
+
+        // Build the dialog in code so we don't need a separate XAML file. Uses
+        // the same DynamicResource theme brushes so it picks up light/dark mode.
+        private void ShowAffectedItemsDialog(string title, IReadOnlyList<BulkRenameService.PreviewItem> items)
+        {
+            var list = new ListBox
+            {
+                BorderThickness = new Thickness(1),
+                FontSize = 13,
+            };
+            list.SetResourceReference(Control.BackgroundProperty, "CardBrush");
+            list.SetResourceReference(Control.ForegroundProperty, "TextBrush");
+            list.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
+
+            if (items.Count == 0)
+            {
+                list.Items.Add("(no matching items)");
+            }
+            else
+            {
+                foreach (var i in items)
+                {
+                    var label = string.IsNullOrWhiteSpace(i.ItemNumber)
+                        ? $"{i.Name}    ·  {i.Type}"
+                        : $"{i.Name}    ·  #{i.ItemNumber}  ·  {i.Type}";
+                    list.Items.Add(label);
+                }
+            }
+
+            var header = new TextBlock
+            {
+                Text = $"{items.Count} item(s)",
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 8),
+            };
+            header.SetResourceReference(TextBlock.ForegroundProperty, "TextMutedBrush");
+
+            var closeBtn = new Button
+            {
+                Content = "Close",
+                Padding = new Thickness(20, 6, 20, 6),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0),
+            };
+            closeBtn.SetResourceReference(Button.StyleProperty, "SecondaryButton");
+
+            var panel = new DockPanel { Margin = new Thickness(14) };
+            DockPanel.SetDock(header, Dock.Top);
+            DockPanel.SetDock(closeBtn, Dock.Bottom);
+            panel.Children.Add(header);
+            panel.Children.Add(closeBtn);
+            panel.Children.Add(list);
+
+            var win = new Window
+            {
+                Title = title,
+                Width = 620,
+                Height = 480,
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = panel,
+            };
+            win.SetResourceReference(Window.BackgroundProperty, "BackgroundBrush");
+            closeBtn.Click += (_, _) => win.Close();
+            win.ShowDialog();
+        }
+
+        private async void BulkRenameApply_Click(object sender, RoutedEventArgs e)
+        {
+            var field = GetSelectedBulkRenameField();
+            if (field == null) return;
+            var oldValue = (BulkRenameOldCombo.Text ?? string.Empty).Trim();
+            var newValue = (BulkRenameNewCombo.Text ?? string.Empty).Trim();
+            string? parent = field == BulkRenameField.Subtype ? BulkRenameParentTypeCombo.SelectedItem as string : null;
+
+            if (string.IsNullOrEmpty(oldValue) || string.IsNullOrEmpty(newValue))
+            {
+                BulkRenameStatus.Text = "Both old and new values are required.";
+                return;
+            }
+            if (string.Equals(oldValue, newValue, StringComparison.Ordinal))
+            {
+                BulkRenameStatus.Text = "Old and new values are identical — nothing to do.";
+                return;
+            }
+            if (field == BulkRenameField.Subtype && string.IsNullOrWhiteSpace(parent))
+            {
+                BulkRenameStatus.Text = "Pick a parent type for the subtype rename.";
+                return;
+            }
+
+            int previewCount;
+            try
+            {
+                previewCount = await BulkRenameService.PreviewAsync(field.Value, oldValue, parent);
+            }
+            catch (Exception ex)
+            {
+                BulkRenameStatus.Text = $"Preview failed: {ex.Message}";
+                return;
+            }
+
+            var fieldLabel = BulkRenameService.Fields.First(f => f.Field == field).Label;
+            var scope = field == BulkRenameField.Subtype ? $" (under type \"{parent}\")" : string.Empty;
+            var confirm = MessageBox.Show(
+                $"Rename {fieldLabel}{scope}\n\n   \"{oldValue}\"\n   →\n   \"{newValue}\"\n\n" +
+                $"This will update {previewCount} item(s) and the matching shared config list. Continue?",
+                "Confirm bulk rename",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            try
+            {
+                BulkRenameStatus.Text = "Applying…";
+                var affected = await BulkRenameService.ApplyAsync(field.Value, oldValue, newValue, parent);
+
+                // MCS-specific: BulkRenameService's post-rename file writes
+                // land at ConfigPaths.X (an empty Config\ folder on this
+                // app). The canonical list lives in settings.db, so sync it
+                // here so dropdowns reflect the new value.
+                SyncConfigStoreAfterBulkRename(field.Value, oldValue, newValue, parent);
+
+                BulkRenameStatus.Text = $"Renamed. {affected} item(s) updated.";
+                WasSaved = true;
+
+                // Refresh the values list so the old value disappears and
+                // the new one shows up.
+                _isLoadingSettings = true;
+                await RefreshBulkRenameOldValuesAsync();
+                _isLoadingSettings = false;
+            }
+            catch (Exception ex)
+            {
+                BulkRenameStatus.Text = $"Rename failed: {ex.Message}";
+                LoggingService.LogError(ex, "BulkRenameApply_Click");
+            }
+        }
+
+        // Mirror the rename into MCS's settings.db so the in-app dropdowns
+        // pick up the new value. Subtypes live as JSON keyed by parent type;
+        // every other field is a newline list.
+        private void SyncConfigStoreAfterBulkRename(BulkRenameField field, string oldValue, string newValue, string? parent)
+        {
+            try
+            {
+                switch (field)
+                {
+                    case BulkRenameField.Type:
+                        ReplaceLineInConfigStore(ConfigStore.Types, oldValue, newValue);
+                        break;
+                    case BulkRenameField.Location:
+                        ReplaceLineInConfigStore(ConfigStore.Locations, oldValue, newValue);
+                        break;
+                    case BulkRenameField.PurchasedFrom:
+                        ReplaceLineInConfigStore(ConfigStore.PurchasedFrom, oldValue, newValue);
+                        break;
+                    case BulkRenameField.Theme:
+                        // Theme list is one-token-per-line; a single rename
+                        // replaces the matching line.
+                        ReplaceLineInConfigStore(ConfigStore.Themes, oldValue, newValue);
+                        break;
+                    case BulkRenameField.Subtype when !string.IsNullOrWhiteSpace(parent):
+                        RenameSubtypeInConfigStore(parent!, oldValue, newValue);
+                        UserSettingsService.ReloadSubtypes();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "SyncConfigStoreAfterBulkRename");
+            }
+        }
+
+        private static void RenameSubtypeInConfigStore(string parentType, string oldValue, string newValue)
+        {
+            var raw = ConfigStore.GetText(ConfigStore.Subtypes);
+            if (string.IsNullOrWhiteSpace(raw)) return;
+
+            Dictionary<string, List<string>>? dict;
+            try
+            {
+                dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(raw);
+            }
+            catch
+            {
+                return; // malformed JSON — bail rather than overwrite
+            }
+            if (dict == null || !dict.TryGetValue(parentType, out var subs)) return;
+
+            bool changed = false;
+            for (int i = 0; i < subs.Count; i++)
+            {
+                if (string.Equals(subs[i], oldValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    subs[i] = newValue;
+                    changed = true;
+                }
+            }
+            if (!changed) return;
+
+            // De-dup in case the new value already existed for this parent.
+            dict[parentType] = subs
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var json = System.Text.Json.JsonSerializer.Serialize(dict,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            ConfigStore.SetText(ConfigStore.Subtypes, json);
+        }
+
+        private static void ReplaceLineInConfigStore(string configName, string oldValue, string newValue)
+        {
+            var existing = LoadLinesFromFile(configName);
+            bool changed = false;
+            for (int i = 0; i < existing.Count; i++)
+            {
+                if (string.Equals(existing[i], oldValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    existing[i] = newValue;
+                    changed = true;
+                }
+            }
+            // De-dup in case the new value already existed in the list.
+            existing = existing
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (changed)
+                ConfigStore.SetText(configName, string.Join(Environment.NewLine, existing));
         }
 
     }

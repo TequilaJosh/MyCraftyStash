@@ -1042,6 +1042,105 @@
                 </Border>
             </TabItem>
 
+            <TabItem Header="Bulk Rename" Style="{StaticResource SidebarTabItem}">
+                <Border Style="{StaticResource ContentPanel}" Margin="12,0,0,0">
+                    <Grid Margin="20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Bulk rename" Style="{StaticResource SectionHeading}"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="Rename a Type, Subtype, Location, Theme, or Purchased From value across every item that uses it. The matching shared config list is updated too so the old value disappears from dropdowns."
+                                   Style="{StaticResource SectionHelp}"/>
+
+                        <StackPanel Grid.Row="2">
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Field" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
+                                <ComboBox Grid.Column="1" x:Name="BulkRenameFieldCombo"
+                                          Width="300" HorizontalAlignment="Left"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}"
+                                          BorderBrush="{DynamicResource BorderBrush}"
+                                          Padding="8,6"
+                                          SelectionChanged="BulkRenameField_Changed"/>
+                            </Grid>
+
+                            <Grid x:Name="BulkRenameParentTypeRow" Margin="0,0,0,12" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Parent type" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
+                                <ComboBox Grid.Column="1" x:Name="BulkRenameParentTypeCombo"
+                                          Width="300" HorizontalAlignment="Left"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}"
+                                          BorderBrush="{DynamicResource BorderBrush}"
+                                          Padding="8,6"
+                                          SelectionChanged="BulkRenameParentType_Changed"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Old value" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
+                                <ComboBox Grid.Column="1" x:Name="BulkRenameOldCombo"
+                                          Width="380" HorizontalAlignment="Left"
+                                          IsEditable="False" IsTextSearchEnabled="True"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}"
+                                          BorderBrush="{DynamicResource BorderBrush}"
+                                          Padding="8,6"
+                                          SelectionChanged="BulkRenameOld_Changed"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="New value" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
+                                <ComboBox Grid.Column="1" x:Name="BulkRenameNewCombo"
+                                          Width="380" HorizontalAlignment="Left"
+                                          IsEditable="True" IsTextSearchEnabled="True"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}"
+                                          BorderBrush="{DynamicResource BorderBrush}"
+                                          Padding="8,6"/>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal" Margin="140,8,0,0">
+                                <Button Content="Preview" Click="BulkRenamePreview_Click"
+                                        Style="{StaticResource SecondaryButton}" Padding="18,8"/>
+                                <Button Content="Show items" Click="BulkRenameShowItems_Click"
+                                        Style="{StaticResource SecondaryButton}" Padding="18,8"
+                                        Margin="10,0,0,0"/>
+                                <Button Content="Apply rename" Click="BulkRenameApply_Click"
+                                        Style="{StaticResource PrimaryButton}" Padding="22,8"
+                                        Margin="10,0,0,0"/>
+                                <TextBlock x:Name="BulkRenameStatus" VerticalAlignment="Center"
+                                           Margin="16,0,0,0"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </TabItem>
+
             <TabItem Header="Catalog Sources" Style="{StaticResource SidebarTabItem}">
                 <Border Style="{StaticResource ContentPanel}" Padding="20">
                     <Grid>
