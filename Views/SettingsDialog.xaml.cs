@@ -834,6 +834,44 @@ namespace MyCraftyStash.Views
             WasSaved = true;
         }
 
+        private void ResetAllConfigLists_Click(object sender, RoutedEventArgs e)
+        {
+            var confirm = MessageBox.Show(
+                "Reset every shared config list (Types, Themes, Locations, Subtypes, " +
+                "Color Order, Purchased From, Inspiration Colors, Tracked Types) to the " +
+                "bundled defaults?\n\n" +
+                "Any custom values you've added via Settings tabs will be lost. " +
+                "Existing inventory items themselves are not affected.",
+                "Reset all config lists",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            try
+            {
+                ConfigStore.ResetAllToDefaults();
+                UserSettingsService.ReloadSubtypes();
+                InventoryService.ReloadColorOrder();
+                InventoryService.ReloadInspirationColors();
+                WasSaved = true;
+
+                // Re-pull the on-screen tab content so the user sees the new values
+                // without having to close + reopen the dialog.
+                LoadDefaultsSettings();
+                LoadTextEditors();
+                LoadSubtypesTab();
+                LoadTrackedItemsTab();
+
+                MessageBox.Show("Config lists reset to defaults.", "Reset complete",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Reset failed: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ResetAllColors_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show(

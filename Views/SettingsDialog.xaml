@@ -316,6 +316,29 @@
                                     HorizontalAlignment="Left"
                                     Margin="0,16,0,0"
                                     Click="ResetAllColors_Click"/>
+
+                            <!-- ── Config lists reset ─────────────────────────────────────────
+                                 Reseeds Types / Themes / Locations / Subtypes / Color Order /
+                                 Purchased From / Inspiration Colors / Tracked Types from the
+                                 bundled defaults (snapshot of the JandH shared-share values).
+                                 Useful right after a fresh install or when the user wants to
+                                 pick up a curated list refresh. Destructive: overwrites any
+                                 customizations the user made via Settings tabs. -->
+                            <TextBlock Text="Config lists"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14"
+                                       Margin="0,28,0,8"/>
+                            <TextBlock Text="Overwrite every shared list (Types, Themes, Locations, Subtypes, Color Order, Purchased From, Inspiration Colors, Tracked Types) with the bundled defaults. Use this when you want to pick up a refreshed curated list — your custom entries will be lost."
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
+                            <Button Content="Reset all config lists to defaults"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="18,8"
+                                    HorizontalAlignment="Left"
+                                    Click="ResetAllConfigLists_Click"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
