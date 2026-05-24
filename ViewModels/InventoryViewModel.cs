@@ -1,12 +1,21 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading;
 using System.Windows;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Views;
+
+using JandH.Core.ViewModels;
+using CatalogLookupService = MyCraftyStash.Services.CatalogLookupService;
 
 namespace MyCraftyStash.ViewModels
 {

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:MyCraftyStash"
              xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
+             xmlns:cvm="clr-namespace:JandH.Core.ViewModels;assembly=JandH.Core"
              xmlns:views="clr-namespace:MyCraftyStash.Views"
              xmlns:converters="clr-namespace:MyCraftyStash.Converters"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -61,7 +62,7 @@
             <DataTemplate DataType="{x:Type vm:WishlistViewModel}">
                 <views:WishlistView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type vm:PurchaseReportViewModel}">
+            <DataTemplate DataType="{x:Type cvm:PurchaseReportViewModel}">
                 <views:PurchaseReportView />
             </DataTemplate>
             

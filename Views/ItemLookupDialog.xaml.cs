@@ -1,11 +1,20 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
-using MyCraftyStash.Services.Catalog;
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.Services.Catalog;
+
+using JandH.Core.ViewModels;
+using CatalogLookupService = MyCraftyStash.Services.CatalogLookupService;
 
 namespace MyCraftyStash.Views
 {

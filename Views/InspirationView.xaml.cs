@@ -1,10 +1,14 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using JandH.Core.ViewModels;
 using MyCraftyStash.ViewModels;
+
+using JandH.Core.Models;
+using JandH.Core.Services;
 
 namespace MyCraftyStash.Views
 {
@@ -160,7 +164,7 @@ namespace MyCraftyStash.Views
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-                var valid = files?.Any(f => MyCraftyStash.Services.ImageLoadService.IsSupported(f)) ?? false;
+                var valid = files?.Any(f => JandH.Core.Services.ImageLoadService.IsSupported(f)) ?? false;
 
                 e.Effects = valid ? DragDropEffects.Copy : DragDropEffects.None;
 
@@ -189,7 +193,7 @@ namespace MyCraftyStash.Views
             var files = e.Data.GetData(DataFormats.FileDrop) as string[];
             if (files == null || files.Length == 0) return;
 
-            var imageFile = files.FirstOrDefault(f => MyCraftyStash.Services.ImageLoadService.IsSupported(f));
+            var imageFile = files.FirstOrDefault(f => JandH.Core.Services.ImageLoadService.IsSupported(f));
 
             if (imageFile != null && DataContext is InspirationViewModel vm)
                 vm.LoadImageFromPath(imageFile);

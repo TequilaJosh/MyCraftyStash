@@ -30,15 +30,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Shared library lives in the sibling JandHInventory repo. CommunityToolkit.Mvvm,
+         Magick.NET, System.Drawing.Common, EF Core base + Relational, ImageMagick
+         all transit through this reference. -->
+    <ProjectReference Include="..\JandHInventory\JandH.Core\JandH.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- MCS-specific packages (provider + tooling + OCR for TE calendar). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.13.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
+    <!-- Source generators don't flow through ProjectReference transitively;
+         CommunityToolkit.Mvvm has to be referenced directly by every project
+         that uses [ObservableProperty] / [RelayCommand]. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
   </ItemGroup>
 
   <ItemGroup>

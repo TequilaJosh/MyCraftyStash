@@ -1,5 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows.Data;
+
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Converters
 {

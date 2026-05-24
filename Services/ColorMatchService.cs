@@ -1,7 +1,14 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Data;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Models;
 using IDb = MyCraftyStash.Data.InventoryDbContext;
+
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Services
 {

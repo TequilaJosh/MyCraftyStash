@@ -1,7 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using JandH.Core.Models;
 using MyCraftyStash.Models;
+
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Views
 {

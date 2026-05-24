@@ -2,7 +2,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using MyCraftyStash.Models;
+using JandH.Core.Data;
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
+using MyCraftyStash.Data;
 using MyCraftyStash.Services;
 using MyCraftyStash.ViewModels;
 using MyCraftyStash.Views;
@@ -14,6 +18,14 @@ namespace MyCraftyStash
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Wire JandH.Core static facades to MCS implementations BEFORE any
+            // other code runs — services and DbContext rely on these being
+            // registered at first use.
+            ConfigPaths.Register(new ConfigPathService());
+            DbContextFactory.Register(() => new InventoryDbContext());
+            UserSettingsService.AppFolderName = "My Crafty Stash";
+            LoggingService.OverrideBaseLogFolder = AppPaths.LogsRoot;
 
             EventManager.RegisterClassHandler(typeof(ComboBox), UIElement.PreviewMouseWheelEvent,
                 new MouseWheelEventHandler((s, args) =>

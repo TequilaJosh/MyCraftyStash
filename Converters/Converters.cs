@@ -1,8 +1,12 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Converters
 {
@@ -151,12 +155,12 @@ namespace MyCraftyStash.Converters
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
             if (values == null || values.Length < 2) return System.Windows.Visibility.Collapsed;
-            var item = values[0] as MyCraftyStash.Services.WizardItemOption;
+            var item = values[0] as JandH.Core.Services.WizardItemOption;
             var coll = values[1] as System.Collections.IEnumerable;
             if (item == null || coll == null) return System.Windows.Visibility.Collapsed;
             foreach (var o in coll)
             {
-                if (o is MyCraftyStash.Services.WizardItemOption other && other.Id == item.Id)
+                if (o is JandH.Core.Services.WizardItemOption other && other.Id == item.Id)
                     return System.Windows.Visibility.Visible;
             }
             return System.Windows.Visibility.Collapsed;

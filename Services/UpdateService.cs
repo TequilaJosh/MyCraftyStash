@@ -1,8 +1,12 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Services
 {

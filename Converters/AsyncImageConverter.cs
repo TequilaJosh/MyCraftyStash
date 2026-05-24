@@ -1,10 +1,14 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Converters
 {

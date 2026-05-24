@@ -1,6 +1,12 @@
-using System.Windows;
+﻿using System.Windows;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Views
 {

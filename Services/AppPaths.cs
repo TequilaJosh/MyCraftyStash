@@ -1,4 +1,8 @@
-using System.IO;
+﻿using System.IO;
+
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Services
 {

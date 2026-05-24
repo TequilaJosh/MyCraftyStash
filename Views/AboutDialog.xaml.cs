@@ -1,10 +1,14 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Navigation;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Views
 {

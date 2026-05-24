@@ -1,12 +1,18 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 using MyCraftyStash.ViewModels;
+
+using JandH.Core.Services;
 
 namespace MyCraftyStash.Views
 {
@@ -193,7 +199,7 @@ namespace MyCraftyStash.Views
             OpenFileDialog dialog = new OpenFileDialog
             {
                 Multiselect = true,
-                Filter = MyCraftyStash.Services.ImageLoadService.OpenFileFilter
+                Filter = JandH.Core.Services.ImageLoadService.OpenFileFilter
             };
             
             if (dialog.ShowDialog() == true)
@@ -223,7 +229,7 @@ namespace MyCraftyStash.Views
             OpenFileDialog dialog = new OpenFileDialog
             {
                 Multiselect = true,
-                Filter = MyCraftyStash.Services.ImageLoadService.OpenFileFilter
+                Filter = JandH.Core.Services.ImageLoadService.OpenFileFilter
             };
             
             if (dialog.ShowDialog() == true)
@@ -265,7 +271,7 @@ namespace MyCraftyStash.Views
         // Inline X on a selected-theme pill: clear IsSelected on the bound item.
         private void RemoveSelectedTheme_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is MyCraftyStash.Models.ThemeCheckboxItem item)
+            if (sender is Button button && button.Tag is JandH.Core.Models.ThemeCheckboxItem item)
                 item.IsSelected = false;
             e.Handled = true;
         }
@@ -273,7 +279,7 @@ namespace MyCraftyStash.Views
         // Inline X on a selected-subtype pill: clear IsChecked on the bound item.
         private void RemoveSelectedSubtype_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is MyCraftyStash.Models.SubtypeCheckboxItem item)
+            if (sender is Button button && button.Tag is JandH.Core.Models.SubtypeCheckboxItem item)
                 item.IsChecked = false;
             e.Handled = true;
         }
@@ -325,13 +331,13 @@ namespace MyCraftyStash.Views
         }
         
         private bool IsImageFile(string path) =>
-            MyCraftyStash.Services.ImageLoadService.IsSupported(path);
+            JandH.Core.Services.ImageLoadService.IsSupported(path);
         
         private string ConvertToBase64(string filePath)
         {
             try
             {
-                return MyCraftyStash.Services.ImageLoadService.LoadAsDataUri(filePath);
+                return JandH.Core.Services.ImageLoadService.LoadAsDataUri(filePath);
             }
             catch
             {
@@ -353,7 +359,7 @@ namespace MyCraftyStash.Views
             {
                 try
                 {
-                    var sentimentService = new MyCraftyStash.Services.SentimentService();
+                    var sentimentService = new JandH.Core.Services.SentimentService();
                     await sentimentService.DeleteSentimentImageAsync(sentimentId);
 
                     // Reload via the ViewModel
@@ -388,13 +394,13 @@ namespace MyCraftyStash.Views
         if (DataContext is not MyCraftyStash.ViewModels.InventoryViewModel vm || vm.SelectedItem == null) return;
 
         // Quote-aware: chips with commas/newlines are preserved as one entry.
-        var updatedLines = MyCraftyStash.Services.SentimentService
+        var updatedLines = JandH.Core.Services.SentimentService
             .ParseSentimentLines(vm.SelectedItem.Sentiments ?? string.Empty)
             .Where(l => !string.Equals(l, sentLine, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         vm.SelectedItem.Sentiments = updatedLines.Count > 0
-            ? MyCraftyStash.Services.SentimentService.SerializeSentimentLines(updatedLines)
+            ? JandH.Core.Services.SentimentService.SerializeSentimentLines(updatedLines)
             : null;
 
         try
@@ -430,10 +436,10 @@ namespace MyCraftyStash.Views
             if (DataContext is not InventoryViewModel vm || vm.SelectedItem == null) return;
 
             var raw = vm.EditingSentimentsText ?? string.Empty;
-            var lines = MyCraftyStash.Services.SentimentService.ParseSentimentLines(raw);
+            var lines = JandH.Core.Services.SentimentService.ParseSentimentLines(raw);
 
             vm.SelectedItem.Sentiments = lines.Count > 0
-                ? MyCraftyStash.Services.SentimentService.SerializeSentimentLines(lines)
+                ? JandH.Core.Services.SentimentService.SerializeSentimentLines(lines)
                 : null;
 
             try

@@ -1,11 +1,19 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System.IO;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Views;
+
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.ViewModels
 {

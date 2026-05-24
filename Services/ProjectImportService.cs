@@ -1,9 +1,16 @@
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Data;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Models;
+
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Services
 {

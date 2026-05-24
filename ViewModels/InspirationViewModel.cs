@@ -1,11 +1,17 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System.IO;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.ViewModels
 {
@@ -839,7 +845,7 @@ namespace MyCraftyStash.ViewModels
                                   defaultTeColors != null || defaultItemIds != null;
                     if (hasAny)
                     {
-                        var boardDefaults = new Models.InspirationBoard
+                        var boardDefaults = new JandH.Core.Models.InspirationBoard
                         {
                             DefaultTypes = defaultTypes,
                             DefaultThemes = defaultThemes,
@@ -1707,7 +1713,7 @@ namespace MyCraftyStash.ViewModels
 
         // ── Board-defaults helpers ────────────────────────────────────────────
 
-        private void InitBoardDefaultPickers(Models.InspirationBoard? board)
+        private void InitBoardDefaultPickers(JandH.Core.Models.InspirationBoard? board)
         {
             var existingTypes   = board?.DefaultTypes?.Split(',',   StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
             var existingThemes  = board?.DefaultThemes?.Split(',',  StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();

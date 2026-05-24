@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,8 +6,14 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
 using MyCraftyStash.ViewModels;
+
+using JandH.Core.Services;
 
 namespace MyCraftyStash.Views
 {
@@ -190,13 +196,13 @@ namespace MyCraftyStash.Views
         }
         
         private bool IsImageFile(string path) =>
-            MyCraftyStash.Services.ImageLoadService.IsSupported(path);
+            JandH.Core.Services.ImageLoadService.IsSupported(path);
 
         private string ConvertToBase64(string filePath)
         {
             try
             {
-                return MyCraftyStash.Services.ImageLoadService.LoadAsDataUri(filePath);
+                return JandH.Core.Services.ImageLoadService.LoadAsDataUri(filePath);
             }
             catch
             {

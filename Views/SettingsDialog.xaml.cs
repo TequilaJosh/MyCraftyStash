@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -11,7 +11,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.Models;
+using JandH.Core.ViewModels;
+using CatalogLookupService = MyCraftyStash.Services.CatalogLookupService;
 
 namespace MyCraftyStash.Views
 {
@@ -87,7 +92,7 @@ namespace MyCraftyStash.Views
             var rows = new System.Collections.Generic.List<CatalogSourceRow>();
             foreach (var p in CatalogLookupService.Providers)
             {
-                var isStub = p is MyCraftyStash.Services.Catalog.StubCatalogProvider;
+                var isStub = p is JandH.Core.Services.Catalog.StubCatalogProvider;
                 rows.Add(new CatalogSourceRow
                 {
                     Id          = p.Id,
@@ -479,7 +484,7 @@ namespace MyCraftyStash.Views
             if (_isLoadingSettings) return;
             if (CustomSortTypesList.SelectedItem is not string selectedType) return;
 
-            var order = new Services.TypeSortOrder
+            var order = new JandH.Core.Services.TypeSortOrder
             {
                 Sort1 = Sort1Combo.SelectedItem as string ?? "Color",
                 Sort2 = Sort2Combo.SelectedItem as string ?? "",

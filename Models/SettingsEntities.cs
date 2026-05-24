@@ -34,73 +34,8 @@ namespace MyCraftyStash.Models
         public string Content { get; set; } = string.Empty;
     }
 
-    /// <summary>
-    /// One row per (external system + external code) -> TE color mapping.
-    /// Most are 1:1 (one DMC# -> one TE color) but a few are many-to-1
-    /// (multiple OLO codes match the same TE color), so the table is keyed
-    /// on (system, external_code) rather than on TE color name.
-    /// </summary>
-    public class ColorMatch
-    {
-        public int Id { get; set; }
-        /// <summary>Source system identifier: "DMC", "OLO", future "Copic", etc.</summary>
-        public string System { get; set; } = string.Empty;
-        /// <summary>External code from the source system (e.g. DMC "225", OLO "R0.1").</summary>
-        public string ExternalCode { get; set; } = string.Empty;
-        /// <summary>TE color name this external code matches (e.g. "Rose Water").</summary>
-        public string TeColorName { get; set; } = string.Empty;
-        /// <summary>Optional hex swatch for the external color (e.g. DMC fiber #).</summary>
-        public string? ExternalHex { get; set; }
-        /// <summary>Optional hex swatch for the TE color (mirrors inventory if known).</summary>
-        public string? TeColorHex { get; set; }
-        /// <summary>Free-form notes — e.g. "Retired", "Closest match", confidence.</summary>
-        public string? Notes { get; set; }
-    }
-
-    /// <summary>
-    /// Cached event scraped from the Taylored Expressions Square Online site.
-    /// Refreshed on app launch in the background; the calendar overlays
-    /// these on top of the user's personal events with a distinct color.
-    /// EventDate is a DateOnly stored as ISO-8601 TEXT (yyyy-MM-dd).
-    /// </summary>
-    public class TeEventCache
-    {
-        public int Id { get; set; }
-        /// <summary>Stable identifier from the source page (URL slug or hash).
-        /// Used to upsert without duplicating across refreshes.</summary>
-        public string ExternalId { get; set; } = string.Empty;
-        public DateTime EventDate { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public string? Url { get; set; }
-        public string? ImageUrl { get; set; }
-        public DateTime FetchedAt { get; set; }
-    }
-
-    /// <summary>
-    /// One row per calendar date that the OCR'd monthly calendar image
-    /// publishes content for. Stores the per-day store hours, any special
-    /// status banner (closed / special-open), and a JSON-encoded list of
-    /// events the published calendar shows for that day.
-    /// </summary>
-    public class TeDailyCalendarCache
-    {
-        /// <summary>Calendar date (yyyy-MM-dd in TEXT).</summary>
-        public DateTime Date { get; set; }
-        /// <summary>"10:00 AM - 4:00 PM" or null when the cell has no hours line.</summary>
-        public string? Hours { get; set; }
-        /// <summary>"Closed", "Open: 10am-3pm", etc. Null when no banner.</summary>
-        public string? Status { get; set; }
-        /// <summary>JSON-encoded List&lt;TeDailyEventLine&gt; — event chips for this day.</summary>
-        public string? EventsJson { get; set; }
-        public DateTime FetchedAt { get; set; }
-    }
-
-    /// <summary>A single event line extracted from the published calendar image.</summary>
-    public class TeDailyEventLine
-    {
-        public string Title { get; set; } = string.Empty;
-        /// <summary>Time range as printed on the calendar, e.g. "1pm - 3pm". Null when no time was found.</summary>
-        public string? Time { get; set; }
-    }
+    // ColorMatch, TeEventCache, TeDailyCalendarCache, TeDailyEventLine were
+    // moved to JandH.Core.Models (sibling shared library) so JandH could
+    // adopt the same feature shape. SettingsDbContext maps them via the
+    // JandH.Core.Models.* fully-qualified names.
 }

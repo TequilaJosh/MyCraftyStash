@@ -1,11 +1,20 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Data;
+using JandH.Core.Models;
+using JandH.Core.Data;
 using MyCraftyStash.Models;
-using MyCraftyStash.Services.Catalog;
+using JandH.Core.Models;
+using JandH.Core.Data;
+using JandH.Core.Services.Catalog;
+
+using JandH.Core.Services;
+using JandH.Core.ViewModels;
 
 namespace MyCraftyStash.Services
 {

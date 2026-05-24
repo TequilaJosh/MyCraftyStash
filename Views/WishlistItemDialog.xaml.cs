@@ -1,8 +1,15 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Models;
+using JandH.Core.Models;
+using JandH.Core.Services;
 using MyCraftyStash.Services;
+
+using JandH.Core.ViewModels;
+using CatalogLookupService = MyCraftyStash.Services.CatalogLookupService;
 
 namespace MyCraftyStash.Views
 {

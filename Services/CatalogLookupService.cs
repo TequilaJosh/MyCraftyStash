@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
-using MyCraftyStash.Models;
-using MyCraftyStash.Services.Catalog;
+using JandH.Core.Models;
+using JandH.Core.Services;
+using JandH.Core.Services.Catalog;
 
 namespace MyCraftyStash.Services
 {
@@ -50,13 +51,13 @@ namespace MyCraftyStash.Services
         {
             var p = AllProviders.FirstOrDefault(x => x.Id == providerId);
             if (p == null) return false;
-            var saved = UserSettingsService.GetSettingValue($"Catalog.Provider.{providerId}.Enabled");
+            var saved = ConfigStore.GetText($"Catalog.Provider.{providerId}.Enabled");
             if (saved == null) return p.DefaultEnabled;
             return saved.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         public static void SetEnabled(string providerId, bool enabled)
-            => UserSettingsService.SetSettingValue($"Catalog.Provider.{providerId}.Enabled",
+            => ConfigStore.SetText($"Catalog.Provider.{providerId}.Enabled",
                 enabled ? "true" : "false");
 
         /// <summary>Compatibility shim — the old single-provider flow used to cache
