@@ -1718,6 +1718,22 @@ namespace MyCraftyStash.ViewModels
             // onto an unrelated item on the next save.
             PendingSnips.Clear();
             ClearFieldErrors();
+            // Related items: clear the per-item selections + filter UI so the
+            // next "Save & add another" starts with a fresh related-items
+            // panel. Leave SelectableItems populated — the candidate list is
+            // expensive to re-query and stays valid across consecutive adds.
+            foreach (var s in SelectableItems)
+                s.IsSelected = false;
+            _savedRelatedSelections.Clear();
+            RelatedItemsSearchText = string.Empty;
+            RelatedItemsFilterType = null;
+            RelatedItemsSearchByName = false;
+            RelatedItemsSearchByTheme = false;
+            RelatedSubtypeFilters.Clear();
+            OnPropertyChanged(nameof(SelectedRelatedItems));
+            OnPropertyChanged(nameof(HasSelectedRelatedItems));
+            OnPropertyChanged(nameof(HasRelatedSubtypeFilters));
+            OnPropertyChanged(nameof(FilteredSelectableItems));
         }
         
         public void AddNewItemImage(string base64Image)

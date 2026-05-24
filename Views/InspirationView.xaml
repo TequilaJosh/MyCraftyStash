@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
              xmlns:controls="clr-namespace:MyCraftyStash.Controls"
+             xmlns:corectls="clr-namespace:JandH.Core.Controls;assembly=JandH.Core"
              xmlns:converters="clr-namespace:MyCraftyStash.Converters"
              Background="{DynamicResource BackgroundBrush}">
 
@@ -297,7 +298,7 @@
                         </ListBox.Resources>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:VirtualizingWrapPanel ItemWidth="152" ItemHeight="172" BufferRows="3"/>
+                                <corectls:VirtualizingWrapPanel ItemWidth="152" ItemHeight="172" BufferRows="3"/>
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>

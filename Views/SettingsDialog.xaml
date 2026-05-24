@@ -533,13 +533,14 @@
                                                FontSize="12" Margin="12,4,12,4"/>
                                     <ComboBox x:Name="CardLabelTypeBox" Grid.Row="2"
                                               Margin="12,0,12,4" Padding="8,6"
-                                              IsEditable="True" IsTextSearchEnabled="True"
+                                              IsEditable="False" IsTextSearchEnabled="True"
                                               IsEnabled="False"/>
 
                                     <TextBlock Grid.Row="3"
                                                Text="Subtypes (one per line — matched as contains; leave blank for no subtype filter)"
                                                Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"
-                                               FontSize="12" Margin="12,8,12,4"/>
+                                               FontSize="12" Margin="12,8,12,4"
+                                               TextWrapping="Wrap"/>
                                     <TextBox x:Name="CardLabelSubtypesBox" Grid.Row="4"
                                              AcceptsReturn="True"
                                              VerticalScrollBarVisibility="Auto"
@@ -555,7 +556,8 @@
                                     <TextBlock Grid.Row="5"
                                                Text="Name contains (only used by name-search labels like 'All Planned Out')"
                                                Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"
-                                               FontSize="12" Margin="12,8,12,4"/>
+                                               FontSize="12" Margin="12,8,12,4"
+                                               TextWrapping="Wrap"/>
                                     <TextBox x:Name="CardLabelNameContainsBox" Grid.Row="6"
                                              Margin="12,0,12,10" Padding="8,6"
                                              FontSize="13" IsEnabled="False"/>
@@ -809,7 +811,9 @@
                                              BorderThickness="0"
                                              Foreground="{DynamicResource TextBrush}"
                                              SelectionMode="Extended"
-                                             MinHeight="260">
+                                             MinHeight="260" MaxHeight="260"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemContainerStyle>
                                             <Style TargetType="ListBoxItem">
                                                 <Setter Property="Padding" Value="8,4"/>
@@ -851,7 +855,9 @@
                                              BorderThickness="0"
                                              Foreground="{DynamicResource TextBrush}"
                                              SelectionMode="Single"
-                                             MaxHeight="160"
+                                             MinHeight="160" MaxHeight="260"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              SelectionChanged="TrackedTypesList_SelectionChanged">
                                         <ListBox.ItemContainerStyle>
                                             <Style TargetType="ListBoxItem">

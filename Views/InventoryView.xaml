@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MyCraftyStash.ViewModels"
              xmlns:controls="clr-namespace:MyCraftyStash.Controls"
+             xmlns:corectls="clr-namespace:JandH.Core.Controls;assembly=JandH.Core"
              xmlns:converters="clr-namespace:MyCraftyStash.Converters"
              Background="{DynamicResource BackgroundBrush}">
 
@@ -178,7 +179,13 @@
                         </ListBox.Resources>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:VirtualizingWrapPanel ItemWidth="{DynamicResource CardItemWidth}" ItemHeight="{DynamicResource CardItemHeight}" BufferRows="3"/>
+                                <!-- EqualizeRowHeights: each row's height is the max of its cards' measured
+                                     content heights. Rows with all-short cards stay compact; one tall card
+                                     stretches its row-mates so the row aligns cleanly. -->
+                                <corectls:VirtualizingWrapPanel ItemWidth="{DynamicResource CardItemWidth}"
+                                                                ItemHeight="{DynamicResource CardItemHeight}"
+                                                                EqualizeRowHeights="True"
+                                                                BufferRows="3"/>
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
