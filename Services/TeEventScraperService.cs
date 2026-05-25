@@ -184,29 +184,17 @@ namespace MyCraftyStash.Services
                 using var ctx = CreateContext();
                 var now = DateTime.UtcNow;
 
-                // Drop anything that's already passed so the cache doesn't grow forever.
-                var cutoff = DateTime.Now.Date.AddDays(-1);
-                var stale = ctx.TeEventsCache.Where(e => e.EventDate < cutoff);
-                ctx.TeEventsCache.RemoveRange(stale);
+                // Replace the whole cache on every successful fetch. The
+                // parser already dedupes by ExternalId, so a clean reload
+                // also clears out any stale rows from earlier app versions
+                // (e.g. duplicates from when ExternalId used a non-stable
+                // hash).
+                ctx.TeEventsCache.RemoveRange(ctx.TeEventsCache);
 
                 foreach (var fetched in events)
                 {
-                    var existing = ctx.TeEventsCache
-                        .FirstOrDefault(e => e.ExternalId == fetched.ExternalId);
-                    if (existing == null)
-                    {
-                        fetched.FetchedAt = now;
-                        ctx.TeEventsCache.Add(fetched);
-                    }
-                    else
-                    {
-                        existing.EventDate   = fetched.EventDate;
-                        existing.Title       = fetched.Title;
-                        existing.Description = fetched.Description;
-                        existing.Url         = fetched.Url;
-                        existing.ImageUrl    = fetched.ImageUrl;
-                        existing.FetchedAt   = now;
-                    }
+                    fetched.FetchedAt = now;
+                    ctx.TeEventsCache.Add(fetched);
                 }
                 await ctx.SaveChangesAsync(ct);
             }
@@ -381,7 +369,10 @@ namespace MyCraftyStash.Services
                 var idBase = url ?? title;
                 var externalId = $"{idBase}|{date:yyyy-MM-dd}";
                 if (time.HasValue) externalId += $"|{time.Value:hh\\:mm}";
-                externalId = externalId.GetHashCode().ToString("X");
+                // Stable hash across processes — String.GetHashCode is randomized
+                // per process in .NET, which caused duplicate cache rows on every
+                // app start.
+                externalId = StableHash(externalId);
 
                 var displayTitle = title;
                 if (time.HasValue)
@@ -401,6 +392,13 @@ namespace MyCraftyStash.Services
                 added = true;
             }
             return added;
+        }
+
+        private static string StableHash(string input)
+        {
+            var bytes = System.Security.Cryptography.SHA1.HashData(
+                System.Text.Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes);
         }
 
         private static string ExtractQuillText(JsonNode? textNode)

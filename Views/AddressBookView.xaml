@@ -157,18 +157,19 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <!-- Detail view (selected, not editing) -->
+                <!-- Detail view (selected, not editing). The inner StackPanel
+                     already handles its own visibility on SelectedEntry /
+                     IsEditing / IsAdding, so the outer ScrollViewer just
+                     hides when nothing is selected. (The original trigger
+                     here set Collapsed unconditionally — a bug.) -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24">
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
-                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding SelectedEntry}" Value="{x:Null}"/>
-                                    </MultiDataTrigger.Conditions>
+                                <DataTrigger Binding="{Binding SelectedEntry}" Value="{x:Null}">
                                     <Setter Property="Visibility" Value="Collapsed"/>
-                                </MultiDataTrigger>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </ScrollViewer.Style>
