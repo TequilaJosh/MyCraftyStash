@@ -73,23 +73,70 @@ namespace MyCraftyStash.Services
             }
         }
 
-        /// <summary>Cached shop weekly hours in Sunday→Saturday order. Empty list
-        /// when nothing has been fetched yet. No network. Safe on the UI thread.</summary>
+        /// <summary>
+        /// Weekly shop hours in Sunday→Saturday order, derived from the
+        /// OCR'd per-day calendar cache (te_daily_calendar_cache).
+        ///
+        /// The Square storefront's hoursConfig block reports a generic
+        /// 9am–5pm Mon–Sat that doesn't match reality — TE's actual
+        /// operating days are Tue/Thu/Fri (with the occasional Saturday
+        /// open day shown via the "Open: …" status banner). The OCR'd
+        /// monthly calendar carries the real published hours per day,
+        /// so we summarise across the next several weeks to pick the
+        /// dominant hours per day-of-week. Days with no cell content
+        /// (neither hours nor status) are reported as "Closed".
+        /// </summary>
         public List<TeShopHoursLine> GetCachedShopHours()
         {
             try
             {
                 using var ctx = CreateContext();
-                var row = ctx.KvSettings.AsNoTracking().FirstOrDefault(k => k.Key == HoursJsonKey);
-                if (row == null || string.IsNullOrWhiteSpace(row.Value)) return new List<TeShopHoursLine>();
-                var lines = JsonSerializer.Deserialize<List<TeShopHoursLine>>(row.Value);
-                return lines ?? new List<TeShopHoursLine>();
+                var fromD = DateTime.Today.Date;
+                var toD   = fromD.AddDays(56); // ~8 weeks
+                var rows = ctx.TeDailyCalendar.AsNoTracking()
+                    .Where(d => d.Date >= fromD && d.Date <= toD)
+                    .ToList();
+                if (rows.Count == 0) return new List<TeShopHoursLine>();
+
+                var result = new List<TeShopHoursLine>(7);
+                foreach (var dow in new[]
+                {
+                    DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday,
+                    DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday,
+                    DayOfWeek.Saturday,
+                })
+                {
+                    var dayRows = rows.Where(r => r.Date.DayOfWeek == dow).ToList();
+                    var text = SummariseWeeklyHours(dayRows);
+                    result.Add(new TeShopHoursLine { Day = dow.ToString(), Text = text });
+                }
+                return result;
             }
             catch (Exception ex)
             {
                 LoggingService.LogDatabaseError(ex, "TeEventScraperService.GetCachedShopHours");
                 return new List<TeShopHoursLine>();
             }
+        }
+
+        private static string SummariseWeeklyHours(List<TeDailyCalendarCache> dayRows)
+        {
+            if (dayRows.Count == 0) return "Closed";
+
+            // If "Closed" status appears more often than not for this DOW,
+            // treat the whole DOW as closed.
+            var closedCount = dayRows.Count(r =>
+                string.Equals(r.Status, "Closed", StringComparison.OrdinalIgnoreCase));
+            if (closedCount * 2 > dayRows.Count) return "Closed";
+
+            // Most common Hours string wins. Empty Hours + no banner means
+            // the OCR found nothing for that day — also reported as Closed.
+            var hoursGroups = dayRows
+                .Where(r => !string.IsNullOrWhiteSpace(r.Hours))
+                .GroupBy(r => r.Hours!)
+                .OrderByDescending(g => g.Count())
+                .ToList();
+            return hoursGroups.Count == 0 ? "Closed" : hoursGroups[0].Key;
         }
 
         /// <summary>Fire-and-forget background refresh from the app shell. Logs
@@ -118,20 +165,8 @@ namespace MyCraftyStash.Services
                     .OrderByDescending(e => e.FetchedAt)
                     .Select(e => (DateTime?)e.FetchedAt)
                     .FirstOrDefault();
-                var hoursFetched = ParseHoursFetchedAt(ctx);
-
-                // Stale if either cache is empty or older than FreshFor. We
-                // refresh both together, so use the older of the two as the
-                // staleness gate.
-                var newest = (newestEvent, hoursFetched) switch
-                {
-                    (null, null) => (DateTime?)null,
-                    (DateTime a, null) => a,
-                    (null, DateTime b) => b,
-                    (DateTime a, DateTime b) => a < b ? a : b,
-                };
-                if (newest == null) return true;
-                return DateTime.UtcNow - newest.Value > FreshFor;
+                if (newestEvent == null) return true;
+                return DateTime.UtcNow - newestEvent.Value > FreshFor;
             }
             catch
             {
@@ -139,19 +174,14 @@ namespace MyCraftyStash.Services
             }
         }
 
-        private static DateTime? ParseHoursFetchedAt(SettingsDbContext ctx)
-        {
-            var row = ctx.KvSettings.AsNoTracking().FirstOrDefault(k => k.Key == HoursFetchedAtKey);
-            if (row == null || string.IsNullOrWhiteSpace(row.Value)) return null;
-            return DateTime.TryParse(row.Value, null, DateTimeStyles.RoundtripKind, out var d) ? d : null;
-        }
-
         public async Task FetchAndCacheAsync(CancellationToken ct = default)
         {
-            // Events and hours are fetched independently so one failure can't
-            // prevent the other from succeeding.
+            // Hours used to be fetched from the storefront's hoursConfig, but
+            // that block on the Square site reports a generic 9am-5pm
+            // Mon-Sat that doesn't match TE's real schedule. Weekly hours
+            // are now derived on-demand from the OCR'd per-day calendar in
+            // GetCachedShopHours(), so we only fetch events here.
             await TryRefreshEventsAsync(ct).ConfigureAwait(false);
-            await TryRefreshHoursAsync(ct).ConfigureAwait(false);
         }
 
         // ── Events refresh ───────────────────────────────────────────────────
