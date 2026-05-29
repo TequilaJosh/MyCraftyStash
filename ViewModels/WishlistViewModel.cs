@@ -299,7 +299,31 @@ namespace MyCraftyStash.ViewModels
             if (item == null) return;
             try
             {
-                await _wishlistService.MoveToInventoryAsync(item, _inventoryService);
+                // Resolve the inventory type. The wishlist often holds free-form
+                // values (e.g. "Die" from a TE import) that don't match the
+                // canonical inventory types ("Dies"). Try to auto-match first;
+                // only prompt the user when we can't pick confidently.
+                var availableTypes = _inventoryService.GetItemTypes();
+                var resolvedType = WishlistTypeMatcher.FindBestMatch(item.Type, availableTypes);
+
+                if (resolvedType == null)
+                {
+                    var dialog = new TypePickerDialog(
+                        itemName: item.Name,
+                        originalType: item.Type,
+                        availableTypes: availableTypes,
+                        suggestedType: null)
+                    {
+                        Owner = Application.Current?.MainWindow,
+                    };
+
+                    var ok = dialog.ShowDialog();
+                    if (ok != true || string.IsNullOrWhiteSpace(dialog.SelectedType))
+                        return; // user cancelled — leave the wishlist item in place
+                    resolvedType = dialog.SelectedType;
+                }
+
+                await _wishlistService.MoveToInventoryAsync(item, _inventoryService, resolvedType);
                 Items.Remove(item);
                 OnPropertyChanged(nameof(FilteredItems));
                 if (ActiveTab != null) UpdateTabStats(ActiveTab, Items);

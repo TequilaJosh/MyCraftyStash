@@ -171,13 +171,22 @@ namespace MyCraftyStash.Services
 
         /// <summary>
         /// Converts a wishlist item to a full inventory Item and deletes it from the wishlist.
+        /// Pass <paramref name="typeOverride"/> to use a specific inventory type
+        /// (e.g. the result of <see cref="WishlistTypeMatcher.FindBestMatch"/> or a
+        /// user choice from <c>TypePickerDialog</c>). When null, falls back to the
+        /// wishlist item's raw Type, then "Stamp".
         /// </summary>
-        public async Task<Item> MoveToInventoryAsync(WishlistItem wishlistItem, InventoryService inventoryService)
+        public async Task<Item> MoveToInventoryAsync(
+            WishlistItem wishlistItem,
+            InventoryService inventoryService,
+            string? typeOverride = null)
         {
             var newItem = new Item
             {
                 Name          = wishlistItem.Name,
-                Type          = wishlistItem.Type ?? "Stamp",
+                Type          = !string.IsNullOrWhiteSpace(typeOverride)
+                                    ? typeOverride
+                                    : (wishlistItem.Type ?? "Stamp"),
                 ItemNumber    = wishlistItem.ItemNumber,
                 Theme         = wishlistItem.Theme,
                 Price         = wishlistItem.Price,

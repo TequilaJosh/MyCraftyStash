@@ -398,7 +398,7 @@
                     </DataGridTemplateColumn>
 
                     <!-- ACTIONS -->
-                    <DataGridTemplateColumn Header="" Width="170">
+                    <DataGridTemplateColumn Header="" Width="210" MinWidth="210">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
