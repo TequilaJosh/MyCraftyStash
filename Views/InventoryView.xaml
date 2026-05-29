@@ -2021,7 +2021,11 @@
 
                                 <DockPanel Margin="0,16,0,8">
                                     <TextBlock Text="Sentiments" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                                    <Button Command="{Binding CropSentimentsDuringAddCommand}"
+                                    <!-- Edit form: use OpenCropToolCommand so each crop persists directly to
+                                         sentiment_images via SelectedItem.Id. The Add form's
+                                         CropSentimentsDuringAddCommand uses draft mode and only flushes
+                                         through SaveItemCoreAsync, which UpdateItem (the Edit save) doesn't call. -->
+                                    <Button Command="{Binding OpenCropToolCommand}"
                                             Style="{StaticResource SecondaryButton}"
                                             HorizontalAlignment="Right"
                                             DockPanel.Dock="Right"

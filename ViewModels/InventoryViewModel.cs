@@ -1350,10 +1350,38 @@ namespace MyCraftyStash.ViewModels
                 }
                 
                 var sentimentsList = SentimentService.ParseSentimentsList(NewItemSentiments);
-                
+
+                // Hide sentiments that already have a saved snip for this item — no
+                // point offering them again. Compare case-insensitively on trimmed
+                // text since the dropdown matches the same way before removing rows
+                // mid-session (SentimentCropView.SaveButton_Click).
+                var existingSnips = await _sentimentService.GetSentimentsByItemIdAsync(SelectedItem.Id);
+                var alreadyClipped = new HashSet<string>(
+                    existingSnips
+                        .Select(s => (s.ExtractedText ?? string.Empty).Trim())
+                        .Where(t => t.Length > 0),
+                    StringComparer.OrdinalIgnoreCase);
+                if (alreadyClipped.Count > 0)
+                {
+                    sentimentsList = sentimentsList
+                        .Where(s => !alreadyClipped.Contains(s.Trim()))
+                        .ToList();
+                }
+
                 var cropWindow = new SentimentCropView(SelectedItem, allImages, sentimentsList);
                 cropWindow.Owner = System.Windows.Application.Current.MainWindow;
                 cropWindow.ShowDialog();
+
+                // Crop view saves directly to sentiment_images via SelectedItem.Id, so
+                // anything added (or deleted via the "Saved this session" strip) is
+                // already in the DB. Refresh the in-memory collection so the
+                // "Sentiments from this Set" card on the Item Detail view picks them
+                // up — important when the user cancels the Edit form afterwards, since
+                // CancelEdit doesn't trigger a re-load.
+                if (cropWindow.SentimentSaved && SelectedItem != null)
+                {
+                    await LoadSentimentImages(SelectedItem.Id);
+                }
             }
             catch (Exception ex)
             {
