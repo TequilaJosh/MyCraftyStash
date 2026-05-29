@@ -134,7 +134,7 @@
                             </StackPanel>
                         </Button>
                     </Border>
-                    <Border DockPanel.Dock="Bottom" Margin="10,8,10,4">
+                    <Border DockPanel.Dock="Bottom" Margin="10,0,10,4">
                         <Button Style="{StaticResource SideNav}"
                                 Command="{Binding OpenSettingsCommand}">
                             <StackPanel Orientation="Horizontal">
@@ -143,6 +143,21 @@
                                            Width="22" Margin="-2,0,4,0"
                                            TextAlignment="Left"/>
                                 <TextBlock Text="Settings" FontSize="13"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Margin="10,8,10,4">
+                        <Button Style="{StaticResource SideNav}"
+                                Click="KoFiButton_Click"
+                                ToolTip="Support My Crafty Stash on Ko-fi">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="☕" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
+                                           VerticalAlignment="Center"
+                                           Width="22" Margin="-2,0,4,0"
+                                           TextAlignment="Left"/>
+                                <TextBlock Text="Support on Ko-fi" FontSize="13"
                                            Foreground="{DynamicResource TextBrush}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>

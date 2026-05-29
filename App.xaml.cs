@@ -202,9 +202,10 @@ namespace MyCraftyStash
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             LoggingService.LogError(e.Exception, "App - DispatcherUnhandledException");
-            MessageBox.Show(
-                $"An unexpected error occurred: {e.Exception.Message}\n\nLog file saved to:\n{LoggingService.GetLogFolderPath()}",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            BugReportService.ShowErrorWithBugReportOption(
+                "An unexpected error occurred in My Crafty Stash.",
+                e.Exception,
+                "DispatcherUnhandledException");
             e.Handled = true;
         }
 
