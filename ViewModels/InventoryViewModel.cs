@@ -44,9 +44,11 @@ namespace MyCraftyStash.ViewModels
         [ObservableProperty]
         private string _searchText = string.Empty;
 
-        /// <summary>When true, the search text only matches against item names.</summary>
+        /// <summary>When true, the search text only matches against item names.
+        /// Defaults to true: most searches are "where's my Big Thanks set" and
+        /// the broader theme/sentiment scan adds noise the user usually doesn't want.</summary>
         [ObservableProperty]
-        private bool _searchByName;
+        private bool _searchByName = true;
 
         /// <summary>When true, the search text only matches against themes.</summary>
         [ObservableProperty]
