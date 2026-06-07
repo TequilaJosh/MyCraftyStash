@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MyCraftyStash.Services;
 using MyCraftyStash.ViewModels;
-
 namespace MyCraftyStash.Models
 {
     /// <summary>
@@ -59,6 +58,15 @@ namespace MyCraftyStash.Models
         public WizardFocalSection? InsideFocal { get; set; }
         public List<WizardConfiguredSentiment> ConfiguredInsideSentiments { get; set; } = new();
         public List<WizardEmbellishment> InsideAddedEmbellishments { get; set; } = new();
+
+        // ── Inside hub: liner cardstock (the inside layer of the card) ───────
+        public int? InsideLinerCardstockItemId { get; set; }
+        public string? InsideLinerCardstockColor { get; set; }
+
+        // ── Inside hub: top-level Details picks (stamps, dies, etc used on
+        //    the inside but not tied to any specific Mat group). Shares the
+        //    WizardDetailEntry shape so the same chip-strip UI works. ────────
+        public List<WizardDetailEntry> InsideMiscDetails { get; set; } = new();
 
         public static JsonSerializerOptions JsonOptions { get; } = new()
         {

@@ -454,13 +454,21 @@
                         <RowDefinition Height="Auto"/>  <!-- Create Card -->
                     </Grid.RowDefinitions>
 
-                    <!-- Top-left back-out: matches the BackButton oval style used inside
-                         the sub-pages. Same command as the old "Cancel" button at the
-                         bottom; the button just lives somewhere more discoverable now. -->
+                    <!-- Top-left back-out, mode-aware:
+                         • Outside main hub → "Back to Project Page" exits the wizard.
+                         • Inside hub       → "Back to Main Hub" flips IsInsideMode off
+                           and returns to the outside main hub. Same visual slot, so
+                           the user always has a way back without scrolling. -->
                     <Button Grid.Row="0" Style="{StaticResource BackButton}"
                             Content="← Back to Project Page"
                             Command="{Binding CancelBuildCommand}"
-                            HorizontalAlignment="Left"/>
+                            HorizontalAlignment="Left"
+                            Visibility="{Binding IsInsideMode, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                    <Button Grid.Row="0" Style="{StaticResource BackButton}"
+                            Content="← Back to Main Hub"
+                            Command="{Binding ToggleInsideModeCommand}"
+                            HorizontalAlignment="Left"
+                            Visibility="{Binding IsInsideMode, Converter={StaticResource BoolToVisConverter}}"/>
 
                     <!-- Inside-of-Card banner — visible only while IsInsideMode is on. -->
                     <Border Grid.Row="1" Margin="6,0,6,12" Padding="16,12"
@@ -470,37 +478,21 @@
                                    Foreground="White" HorizontalAlignment="Center"/>
                     </Border>
 
-                    <UniformGrid Grid.Row="2" Rows="4" Columns="2" VerticalAlignment="Center">
-                        <!-- Cardbase — outside-only, hidden in inside mode. -->
-                        <Button Command="{Binding NavToCardBaseCommand}"
-                                Visibility="{Binding IsInsideMode, Converter={StaticResource InverseBoolToVisConverter}}">
+                    <!-- ═══ Outside-mode hub: 4 rows × 2 cols, 8 buttons ═══════════
+                         Shown only when IsInsideMode is False. Per-button mode
+                         visibility on Cardbase/Envelopes is no longer needed
+                         because the entire grid is hidden when we flip modes. -->
+                    <UniformGrid Grid.Row="2" Rows="4" Columns="2" VerticalAlignment="Center"
+                                 Visibility="{Binding IsInsideMode, Converter={StaticResource InverseBoolToVisConverter}}">
+                        <!-- Row 1: Cardbase | Sentiment -->
+                        <Button Command="{Binding NavToCardBaseCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Cardbase"/>
                                     <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding CardBaseSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
+                                        <DataTrigger Binding="{Binding CardBaseSaved}" Value="True">
                                             <Setter Property="Content" Value="Cardbase - Done!"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Command="{Binding NavToBackgroundMatCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="Background Mat"/>
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding BackgroundMatSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Content" Value="Background Mat - Done!"/>
-                                        </MultiDataTrigger>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
@@ -510,29 +502,22 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Sentiment"/>
                                     <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding SentimentSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
+                                        <DataTrigger Binding="{Binding SentimentSaved}" Value="True">
                                             <Setter Property="Content" Value="Sentiment - Done!"/>
-                                        </MultiDataTrigger>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Command="{Binding NavToAdditionalMatCommand}">
+                        <!-- Row 2: Background Mat | Embellishments -->
+                        <Button Command="{Binding NavToBackgroundMatCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="Additional Mat"/>
+                                    <Setter Property="Content" Value="Background Mat"/>
                                     <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding AdditionalMatSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Content" Value="Additional Mat - Done!"/>
-                                        </MultiDataTrigger>
+                                        <DataTrigger Binding="{Binding BackgroundMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Background Mat - Done!"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
@@ -542,52 +527,169 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Embellishments"/>
                                     <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding EmbellishmentsSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
+                                        <DataTrigger Binding="{Binding EmbellishmentsSaved}" Value="True">
                                             <Setter Property="Content" Value="Embellishments - Done!"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Command="{Binding NavToFocalMatCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="Focal Mat"/>
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding FocalMatSaved}" Value="True"/>
-                                                <Condition Binding="{Binding IsInsideMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Content" Value="Focal Mat - Done!"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <!-- Envelopes — outside-only, hidden in inside mode. -->
-                        <controls:WizardItemPickerControl DataContext="{Binding EnvelopesPicker}"
-                                                          PlaceholderText="Envelopes"
-                                                          Visibility="{Binding IsInsideMode, Converter={StaticResource InverseBoolToVisConverter}}"/>
-                        <!-- Build Inside / Done with Inside toggle button. Label swaps and
-                             clicking always flips IsInsideMode. -->
-                        <Button Command="{Binding ToggleInsideModeCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="Build Inside of Card"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsInsideMode}" Value="True">
-                                            <Setter Property="Content" Value="Done with Inside"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
+                        <!-- Row 3: Additional Mat | Build Inside of Card -->
+                        <Button Command="{Binding NavToAdditionalMatCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Additional Mat"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AdditionalMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Additional Mat - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Command="{Binding ToggleInsideModeCommand}"
+                                Content="Build Inside of Card"
+                                Style="{StaticResource HubButton}"/>
+                        <!-- Row 4: Focal Mat | Envelopes -->
+                        <Button Command="{Binding NavToFocalMatCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Focal Mat"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding FocalMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Focal Mat - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <controls:WizardItemPickerControl DataContext="{Binding EnvelopesPicker}"
+                                                          PlaceholderText="Envelopes"/>
                     </UniformGrid>
+
+                    <!-- ═══ Inside-mode hub: 5 rows × 2 cols, 7 buttons + wide Done ═══
+                         Shown only when IsInsideMode is True. Cardstock and Details
+                         buttons are stubs in Phase A; Phase B and C wire the real
+                         behavior. -->
+                    <Grid Grid.Row="2" VerticalAlignment="Center"
+                          Visibility="{Binding IsInsideMode, Converter={StaticResource BoolToVisConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Row 1: Cardstock (inside liner) | Sentiment -->
+                        <Button Grid.Row="0" Grid.Column="0"
+                                Command="{Binding NavToInsideCardstockCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Cardstock"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding InsideCardstockSaved}" Value="True">
+                                            <Setter Property="Content" Value="Cardstock - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Command="{Binding NavToSentimentCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Sentiment"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SentimentSaved}" Value="True">
+                                            <Setter Property="Content" Value="Sentiment - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Row 2: Background Mat | Embellishments -->
+                        <Button Grid.Row="1" Grid.Column="0"
+                                Command="{Binding NavToBackgroundMatCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Background Mat"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BackgroundMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Background Mat - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="1"
+                                Command="{Binding NavToEmbellishmentsCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Embellishments"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EmbellishmentsSaved}" Value="True">
+                                            <Setter Property="Content" Value="Embellishments - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Row 3: Additional Mat | Details -->
+                        <Button Grid.Row="2" Grid.Column="0"
+                                Command="{Binding NavToAdditionalMatCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Additional Mat"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AdditionalMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Additional Mat - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Grid.Row="2" Grid.Column="1"
+                                Command="{Binding NavToInsideDetailsCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Details"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding InsideDetailsSaved}" Value="True">
+                                            <Setter Property="Content" Value="Details - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Row 4: Focal Mat | (empty) -->
+                        <Button Grid.Row="3" Grid.Column="0"
+                                Command="{Binding NavToFocalMatCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Focal Mat"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding FocalMatSaved}" Value="True">
+                                            <Setter Property="Content" Value="Focal Mat - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Row 5: Done with Inside (spans both columns) -->
+                        <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                Command="{Binding ToggleInsideModeCommand}"
+                                Content="Done with Inside"
+                                Style="{StaticResource HubButton}"/>
+                    </Grid>
                     <StackPanel Grid.Row="3" Margin="6,12,6,4">
                         <Button Style="{StaticResource HubPrimaryButton}"
                                 Content="Create Card"
@@ -640,6 +742,7 @@
                     <Button Grid.Row="0" Style="{StaticResource BackButton}" Content="← Back to hub"
                             Command="{Binding BackToHubCommand}"/>
                     <UniformGrid Grid.Row="1" Rows="2" Columns="2" VerticalAlignment="Center">
+                        <!-- Row 1: Cardfold | Details -->
                         <Button Command="{Binding NavCardBaseToCardfoldCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
@@ -652,18 +755,6 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Command="{Binding NavCardBaseToCardstockCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="Cardstock"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CardStockSaved}" Value="True">
-                                            <Setter Property="Content" Value="Cardstock - Done!"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
                         <Button Command="{Binding NavCardBaseToDetailsCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
@@ -671,6 +762,19 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CardBaseDetailsSaved}" Value="True">
                                             <Setter Property="Content" Value="Details - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <!-- Row 2: Cardstock | Adhesives -->
+                        <Button Command="{Binding NavCardBaseToCardstockCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="Cardstock"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CardStockSaved}" Value="True">
+                                            <Setter Property="Content" Value="Cardstock - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -730,7 +834,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Button Grid.Row="0" Grid.Column="0"
-                                Content="A2 Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A2 Top Fold">
+                                 Content="A2 Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A2 Top Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -743,8 +847,8 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Grid.Row="0" Grid.Column="1"
-                                Content="Mini Slim Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Mini Slim Top Fold">
+                        <Button Grid.Row="2" Grid.Column="0"
+                                 Content="Mini Slim Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Mini Slim Top Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -758,7 +862,7 @@
                             </Button.Style>
                         </Button>
                         <Button Grid.Row="1" Grid.Column="0"
-                                Content="A2 Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A2 Side Fold">
+                                 Content="A2 Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A2 Side Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -771,8 +875,8 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Grid.Row="1" Grid.Column="1"
-                                Content="Mini Slim Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Mini Slim Side Fold">
+                        <Button Grid.Row="2" Grid.Column="1"
+                                 Content="Mini Slim Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Mini Slim Side Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -785,8 +889,8 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Grid.Row="2" Grid.Column="0"
-                                Content="A7 Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A7 Top Fold">
+                        <Button Grid.Row="0" Grid.Column="1"
+                                 Content="A7 Top Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A7 Top Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -799,8 +903,8 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Grid.Row="2" Grid.Column="1"
-                                Content="Fun Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Fun Fold">
+                        <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                                 Content="Fun Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="Fun Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -813,9 +917,8 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <!-- 7th button is alone in its row → span both columns. -->
-                        <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-                                Content="A7 Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A7 Side Fold">
+                        <Button Grid.Row="1" Grid.Column="1"
+                                 Content="A7 Side Fold" Command="{Binding SelectCardFoldCommand}" CommandParameter="A7 Side Fold">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Style.Triggers>
@@ -923,6 +1026,40 @@
                             Margin="6,12,6,4"/>
                 </Grid>
 
+                <!-- ═══ Inside Cardstock sub-page (single picker + Save) ═══════
+                     Reached from the Inside Hub's Cardstock button. Picks the
+                     cardstock layered onto the inside of the card. Simpler than
+                     the outside Cardbase Cardstock page (no foil/glitter
+                     sub-pickers, no self-blend) — extensible later. -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsInsideCardstockSectionActive}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Button Grid.Row="0" Style="{StaticResource BackButton}"
+                            Content="← Back to Inside"
+                            Command="{Binding BackToHubCommand}"/>
+                    <controls:WizardItemPickerControl Grid.Row="1"
+                                                      DataContext="{Binding InsideLinerCardstockPicker}"
+                                                      PlaceholderText="Cardstock for inside"
+                                                      Margin="6,12,6,0"/>
+                    <Button Grid.Row="2" Style="{StaticResource HubPrimaryButton}"
+                            Content="Save Inside Cardstock"
+                            Command="{Binding SaveInsideCardstockAndBackToHubCommand}"
+                            Margin="6,12,6,4"/>
+                </Grid>
+
                 <!-- ═══ Details sub-page (8 reusable pickers + Save Details) ════
                      Shared across parent contexts (Cardbase, Background Mat, …).
                      Visibility gate is the unified IsDetailsStepActive; back/save
@@ -1010,25 +1147,25 @@
                         </Grid.RowDefinitions>
                         <controls:WizardItemPickerControl Grid.Row="0" Grid.Column="0"
                                                           DataContext="{Binding StampsPicker}"
-                                                          PlaceholderText="Stamps"/>
-                        <controls:WizardItemPickerControl Grid.Row="0" Grid.Column="1"
-                                                          DataContext="{Binding DiesPicker}"
-                                                          PlaceholderText="Dies"/>
+                                                           PlaceholderText="Stamps"/>
                         <controls:WizardItemPickerControl Grid.Row="1" Grid.Column="0"
-                                                          DataContext="{Binding EmbellishmentsPicker}"
-                                                          PlaceholderText="Embellishments"/>
+                                                          DataContext="{Binding DiesPicker}"
+                                                           PlaceholderText="Dies"/>
                         <controls:WizardItemPickerControl Grid.Row="1" Grid.Column="1"
-                                                          DataContext="{Binding StackletsPicker}"
-                                                          PlaceholderText="Stacklets"/>
+                                                          DataContext="{Binding EmbellishmentsPicker}"
+                                                           PlaceholderText="Embellishments"/>
                         <controls:WizardItemPickerControl Grid.Row="2" Grid.Column="0"
+                                                          DataContext="{Binding StackletsPicker}"
+                                                           PlaceholderText="Stacklets"/>
+                        <controls:WizardItemPickerControl Grid.Row="0" Grid.Column="1"
                                                           DataContext="{Binding EmbossingFoldersPicker}"
-                                                          PlaceholderText="Embossing Folders"/>
-                        <controls:WizardItemPickerControl Grid.Row="2" Grid.Column="1"
+                                                           PlaceholderText="Embossing Folders"/>
+                        <controls:WizardItemPickerControl Grid.Row="3" Grid.Column="0"
                                                           DataContext="{Binding StencilsPicker}"
-                                                          PlaceholderText="Stencils"/>
+                                                           PlaceholderText="Stencils"/>
 
                         <!-- Inks / Watercolors – mode toggle on top, then color list or watercolor item list -->
-                        <Grid Grid.Row="3" Grid.Column="0" MinHeight="56" Margin="6">
+                        <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" MinHeight="56" Margin="6">
                             <ToggleButton x:Name="InksWatercolorsToggle"
                                           IsChecked="{Binding InksWatercolorsIsOpen, Mode=TwoWay}"
                                           ClickMode="Press"
@@ -1483,11 +1620,10 @@
 
                         <controls:WizardItemPickerControl Grid.Row="3" Grid.Column="1"
                                                           DataContext="{Binding OloMarkersPicker}"
-                                                          PlaceholderText="OLO Markers"/>
-                        <!-- Lone in its row → span both columns. -->
-                        <controls:WizardItemPickerControl Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                                           PlaceholderText="OLO Markers"/>
+                        <controls:WizardItemPickerControl Grid.Row="2" Grid.Column="1"
                                                           DataContext="{Binding FoilsPicker}"
-                                                          PlaceholderText="Foils"/>
+                                                           PlaceholderText="Foils"/>
                     </Grid>
 
                     <!-- ── Selection Details: per-picker follow-up questions ──────
@@ -2140,6 +2276,7 @@
                     </Border>
 
                     <UniformGrid Grid.Row="2" Rows="2" Columns="2" VerticalAlignment="Center">
+                        <!-- Row 1: Cardstock | Details -->
                         <Button Command="{Binding NavBgMatToCardstockCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
@@ -2152,18 +2289,6 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Command="{Binding NavBgMatToHowCutCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
-                                    <Setter Property="Content" Value="How was it cut"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding BgPieceHowCutSaved}" Value="True">
-                                            <Setter Property="Content" Value="How was it cut - Done!"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
                         <Button Command="{Binding NavBgMatToDetailsCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
@@ -2171,6 +2296,19 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding BgPieceDetailsSaved}" Value="True">
                                             <Setter Property="Content" Value="Details - Done!"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <!-- Row 2: How was it cut | Adhesives -->
+                        <Button Command="{Binding NavBgMatToHowCutCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
+                                    <Setter Property="Content" Value="How was it cut"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BgPieceHowCutSaved}" Value="True">
+                                            <Setter Property="Content" Value="How was it cut - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

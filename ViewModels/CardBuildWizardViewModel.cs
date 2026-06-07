@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using MyCraftyStash.Models;
 using MyCraftyStash.Services;
-
 namespace MyCraftyStash.ViewModels
 {
     // ── Wizard helper types ────────────────────────────────────────────────────
@@ -1220,6 +1219,8 @@ namespace MyCraftyStash.ViewModels
             OnPropertyChanged(nameof(IsFocalMatSectionActive));
             OnPropertyChanged(nameof(IsSentimentSectionActive));
             OnPropertyChanged(nameof(IsEmbellishmentsSectionActive));
+            OnPropertyChanged(nameof(IsInsideCardstockSectionActive));
+            OnPropertyChanged(nameof(IsInsideDetailsSectionActive));
             OnPropertyChanged(nameof(IsDetailsStepActive));
             OnPropertyChanged(nameof(IsBackgroundOrAdditionalMatActive));
         }
@@ -1231,6 +1232,10 @@ namespace MyCraftyStash.ViewModels
         public bool IsFocalMatSectionActive => CurrentSection == "FocalMat";
         public bool IsSentimentSectionActive => CurrentSection == "Sentiment";
         public bool IsEmbellishmentsSectionActive => CurrentSection == "Embellishments";
+        // Inside-hub-only sections. Both are top-level (CurrentSection values),
+        // not sub-steps, so they can be reached directly from the inside hub.
+        public bool IsInsideCardstockSectionActive => CurrentSection == "InsideCardstock";
+        public bool IsInsideDetailsSectionActive   => CurrentSection == "InsideDetails";
 
         [RelayCommand]
         private void NavToCardBase()
@@ -1856,6 +1861,7 @@ namespace MyCraftyStash.ViewModels
             "FocalMat"        => "Save & Return to Focal Mat",
             "Sentiment"       => "Save & Return to Sentiment",
             "Inside"          => "Save & Return to Inside",
+            "InsideMisc"      => "Save & Return to Inside",
             _                 => "Save & Return"
         };
 
@@ -1867,6 +1873,7 @@ namespace MyCraftyStash.ViewModels
             "FocalMat"        => "← Back to Focal Mat",
             "Sentiment"       => "← Back to Sentiment",
             "Inside"          => "← Back to Inside",
+            "InsideMisc"      => "← Back to Inside",
             _                 => "← Back"
         };
 
@@ -1887,6 +1894,7 @@ namespace MyCraftyStash.ViewModels
             "AdditionalMat"  => CurrentMat?.AddedDetails ?? _emptyDetails,
             "FocalMat"       => CurrentMat?.AddedDetails ?? _emptyDetails,
             "Sentiment"      => _pendingSentimentDetails,
+            "InsideMisc"     => InsideMiscDetails,
             _                => CardBaseAddedDetails
         };
 
@@ -1941,8 +1949,13 @@ namespace MyCraftyStash.ViewModels
                     SentimentPieceDetailsSaved = _pendingSentimentDetails.Count > 0;
                     SentimentSubStep = "Hub";
                     break;
-                // Future parents (AdditionalMat, FocalMat, Inside) add their own
-                // navigation here when those hubs land.
+                case "InsideMisc":
+                    // Top-level Details button on the inside hub. No sub-step
+                    // to unwind; just flip the Saved flag and pop back to the
+                    // (inside-mode) hub.
+                    InsideDetailsSaved = InsideMiscDetails.Count > 0;
+                    CurrentSection = "Hub";
+                    break;
                 default:
                     CurrentCardBaseStep = "Hub";
                     CurrentSection = "Hub";
@@ -2807,7 +2820,8 @@ namespace MyCraftyStash.ViewModels
             || (IsBackgroundMatSectionActive && IsBgMatDetailsStep)
             || (IsAdditionalMatSectionActive && IsBgMatDetailsStep)
             || (IsFocalMatSectionActive && IsBgMatDetailsStep)
-            || (IsSentimentSectionActive && IsSentimentSubStepDetails);
+            || (IsSentimentSectionActive && IsSentimentSubStepDetails)
+            || IsInsideDetailsSectionActive;
 
         // Routes the Details panel's Back button back to the right parent hub.
         // Alternative considered: pass DetailsReturnTarget as a CommandParameter
@@ -2822,6 +2836,7 @@ namespace MyCraftyStash.ViewModels
                 case "AdditionalMat":  BgMatHubStep        = "Hub"; break;
                 case "FocalMat":       BgMatHubStep        = "Hub"; break;
                 case "Sentiment":      SentimentSubStep    = "Hub"; break;
+                case "InsideMisc":     CurrentSection      = "Hub"; break;
                 default:
                     CurrentCardBaseStep = "Hub";
                     CurrentSection      = "Hub";
@@ -2921,6 +2936,48 @@ namespace MyCraftyStash.ViewModels
         {
             CurrentSection = "Hub";
             UpdateSummaryLines();
+        }
+
+        // ── Inside hub: Cardstock (inside liner) ─────────────────────────────
+        // The cardstock layered onto the inside of the card (where the message
+        // goes). Distinct from Cardbase (outside-only). Single picker, no
+        // foil/glitter sub-types for now — kept simple, extensible later.
+        public WizardItemPicker InsideLinerCardstockPicker { get; } =
+            new() { PlaceholderText = "Cardstock for inside" };
+
+        [ObservableProperty] private WizardItemOption? _selectedInsideLinerCardstockItem;
+        [ObservableProperty] private string? _selectedInsideLinerCardstockColor;
+        [ObservableProperty] private bool _insideCardstockSaved;
+
+        [RelayCommand]
+        private void NavToInsideCardstock()
+        {
+            CurrentSection = "InsideCardstock";
+        }
+
+        [RelayCommand]
+        private void SaveInsideCardstockAndBackToHub()
+        {
+            SelectedInsideLinerCardstockItem = InsideLinerCardstockPicker.SelectedItem;
+            SelectedInsideLinerCardstockColor = InsideLinerCardstockPicker.SelectedItem?.Name;
+            InsideCardstockSaved = SelectedInsideLinerCardstockItem != null;
+            CurrentSection = "Hub";
+            UpdateSummaryLines();
+        }
+
+        // ── Inside hub: Details (shared sub-page dispatch) ───────────────────
+        // Reuses the existing top-level Details picker grid (stamps, dies,
+        // embossing folders, etc.) via DetailsReturnTarget = "InsideMisc".
+        // Picks committed here land in InsideMiscDetails on the snapshot.
+        [ObservableProperty] private bool _insideDetailsSaved;
+
+        public ObservableCollection<WizardDetailEntry> InsideMiscDetails { get; } = new();
+
+        [RelayCommand]
+        private void NavToInsideDetails()
+        {
+            DetailsReturnTarget = "InsideMisc";
+            CurrentSection = "InsideDetails";
         }
 
         // ── Project image (passed in from caller) ─────────────────────────────
@@ -4569,6 +4626,12 @@ namespace MyCraftyStash.ViewModels
             EnvelopesPicker.Load(
                 await labels.GetItemsForLabelAsync("Envelopes", _service),
                 Subs("Envelopes"));
+            // Inside hub: liner cardstock picker. Same source as base cardstock
+            // (label "Cardstock" with subtype 8.5x11), kept as one bag of items
+            // so the inside layer can be anything the user owns in stock paper.
+            InsideLinerCardstockPicker.Load(
+                await labels.GetItemsForLabelAsync("Cardstock", _service),
+                Subs("Cardstock"));
 
             // Embossing-powder picker (used inside the stamp follow-up when "Did you emboss?" is yes,
             // and for the embellishment embossing-powder follow-up). Pre-filtered to Embellishments
@@ -4775,8 +4838,14 @@ namespace MyCraftyStash.ViewModels
             // Load watercolor items for the custom color picker
             _watercolorItems = await labels.GetItemsForLabelAsync("Watercolor", _service);
 
-            // Load themes for sentiment theme search
-            SentimentThemes = Services.ConfigStore.GetLines(Services.ConfigStore.Themes)
+            // Load themes for sentiment theme search.
+            // MCS stores config in settings.db via ConfigStore; JandH reads
+            // text files from the network share. Same end shape (List<string>),
+            // just sourced differently.
+            SentimentThemes = MyCraftyStash.Services.ConfigStore
+                .GetLines(MyCraftyStash.Services.ConfigStore.Themes)
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .Select(l => l.Trim())
                 .OrderBy(l => l, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             OnPropertyChanged(nameof(SentimentThemes));
@@ -5712,7 +5781,7 @@ namespace MyCraftyStash.ViewModels
 
                 // Apply type filter (Dies/Stamps are combinable per the user's spec — checking
                 // both shows both kinds, checking neither shows everything).
-                IEnumerable<Models.SentimentImage> filtered = sentimentImages;
+                IEnumerable<MyCraftyStash.Models.SentimentImage> filtered = sentimentImages;
                 if (SentimentFilterDies && !SentimentFilterStamps)
                     filtered = sentimentImages.Where(s => s.Item?.Type?.Contains("Die", StringComparison.OrdinalIgnoreCase) ?? false);
                 else if (SentimentFilterStamps && !SentimentFilterDies)
@@ -6130,7 +6199,7 @@ namespace MyCraftyStash.ViewModels
                     : await _sentimentService.SearchSentimentsAsync(InsideSentimentSearchQuery);
 
                 // Apply Dies-only / Stamps-only type filter
-                IEnumerable<Models.SentimentImage> filtered = sentimentImages;
+                IEnumerable<MyCraftyStash.Models.SentimentImage> filtered = sentimentImages;
                 if (InsideSentimentFilterDies && !InsideSentimentFilterStamps)
                     filtered = sentimentImages.Where(s => s.Item?.Type?.Contains("Die", StringComparison.OrdinalIgnoreCase) ?? false);
                 else if (InsideSentimentFilterStamps && !InsideSentimentFilterDies)
@@ -7342,6 +7411,10 @@ namespace MyCraftyStash.ViewModels
                 InsideFocal                = InsideFocal,
                 ConfiguredInsideSentiments = ConfiguredInsideSentiments.ToList(),
                 InsideAddedEmbellishments  = InsideAddedEmbellishments.ToList(),
+
+                InsideLinerCardstockItemId = SelectedInsideLinerCardstockItem?.Id,
+                InsideLinerCardstockColor  = SelectedInsideLinerCardstockColor,
+                InsideMiscDetails          = InsideMiscDetails.ToList(),
             };
             return snap.ToJson();
         }
@@ -7409,6 +7482,24 @@ namespace MyCraftyStash.ViewModels
             foreach (var s in snap.ConfiguredInsideSentiments ?? Enumerable.Empty<WizardConfiguredSentiment>()) ConfiguredInsideSentiments.Add(s);
             InsideAddedEmbellishments.Clear();
             foreach (var e in snap.InsideAddedEmbellishments ?? Enumerable.Empty<WizardEmbellishment>()) InsideAddedEmbellishments.Add(e);
+
+            // Inside hub: liner cardstock + misc Details
+            SelectedInsideLinerCardstockColor = snap.InsideLinerCardstockColor;
+            if (snap.InsideLinerCardstockItemId is int liner)
+            {
+                // Pull from the picker's filtered set (loaded via Load() above).
+                // Falls back to null if the item no longer exists in inventory.
+                SelectedInsideLinerCardstockItem =
+                    InsideLinerCardstockPicker.FilteredItems.FirstOrDefault(o => o.Id == liner);
+                InsideLinerCardstockPicker.SelectedItem = SelectedInsideLinerCardstockItem;
+            }
+            InsideCardstockSaved = SelectedInsideLinerCardstockItem != null
+                                   || !string.IsNullOrEmpty(SelectedInsideLinerCardstockColor);
+
+            InsideMiscDetails.Clear();
+            foreach (var d in snap.InsideMiscDetails ?? Enumerable.Empty<WizardDetailEntry>())
+                InsideMiscDetails.Add(d);
+            InsideDetailsSaved = InsideMiscDetails.Count > 0;
 
             UpdateSummaryLines();
         }
