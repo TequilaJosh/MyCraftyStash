@@ -1036,6 +1036,95 @@
                 </Border>
             </TabItem>
 
+            <TabItem Header="Cloud Sync" Style="{StaticResource SidebarTabItem}">
+                <Border Style="{StaticResource ContentPanel}" Padding="20">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionHeading}" Text="Cloud Sync"/>
+                            <TextBlock Style="{StaticResource SectionHelp}"
+                                       Text="Push your stash to the My Crafty Stash cloud so you can browse it read-only from your phone. The desktop stays the source of truth: edits happen here and get mirrored upward. Mint an API key on the website, paste it below, hit Test, then Sync."/>
+
+                            <!-- Endpoint URL -->
+                            <TextBlock Text="Endpoint URL" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                            <TextBox x:Name="CloudEndpointBox"
+                                     Background="{DynamicResource InputBackgroundBrush}"
+                                     Foreground="{DynamicResource TextBrush}"
+                                     BorderBrush="{DynamicResource BorderBrush}"
+                                     Padding="8,6"/>
+                            <TextBlock Text="The base URL of your Static Web App. Usually https://wonderful-meadow-0a1a40110.7.azurestaticapps.net (or your custom domain). No trailing slash."
+                                       FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,4,0,12"/>
+
+                            <!-- API key -->
+                            <TextBlock Text="API key" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="CloudApiKeyBox" Grid.Column="0"
+                                             Background="{DynamicResource InputBackgroundBrush}"
+                                             Foreground="{DynamicResource TextBrush}"
+                                             BorderBrush="{DynamicResource BorderBrush}"
+                                             Padding="8,6"/>
+                                <Button Grid.Column="1" Content="Clear"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Padding="14,4" Margin="8,0,0,0"
+                                        Click="CloudClearKey_Click"/>
+                            </Grid>
+                            <TextBlock x:Name="CloudKeyStatusText"
+                                       Text="No API key saved." FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,4,0,12"/>
+
+                            <!-- Action buttons -->
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="CloudTestButton" Content="Test connection"
+                                        Style="{StaticResource SecondaryButton}" Padding="16,6"
+                                        Click="CloudTest_Click"/>
+                                <Button x:Name="CloudSaveButton" Content="Save"
+                                        Style="{StaticResource SecondaryButton}" Padding="16,6" Margin="8,0,0,0"
+                                        Click="CloudSave_Click"/>
+                                <Button x:Name="CloudSyncButton" Content="Sync now"
+                                        Style="{StaticResource SecondaryButton}" Padding="16,6" Margin="8,0,0,0"
+                                        Click="CloudSync_Click"/>
+                                <Button x:Name="CloudCancelButton" Content="Cancel sync"
+                                        Style="{StaticResource SecondaryButton}" Padding="16,6" Margin="8,0,0,0"
+                                        IsEnabled="False"
+                                        Click="CloudCancel_Click"/>
+                            </StackPanel>
+
+                            <!-- Status / progress -->
+                            <Border Margin="0,16,0,0" Padding="12"
+                                    Background="{DynamicResource SidebarBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6">
+                                <StackPanel>
+                                    <TextBlock x:Name="CloudStatusText"
+                                               Text="Not yet synced."
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <ProgressBar x:Name="CloudProgressBar"
+                                                 Height="6" Margin="0,8,0,0"
+                                                 Minimum="0" Maximum="100" Value="0"
+                                                 Visibility="Collapsed"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Clear cloud data -->
+                            <TextBlock Text="Reset" FontWeight="SemiBold" Margin="0,20,0,4"/>
+                            <TextBlock Text="If you want to start fresh, wipe the local sync state so the next Sync uploads everything again. (To delete what's already in the cloud, revoke the key from the website.)"
+                                       FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Button Content="Reset local sync state"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="14,6" HorizontalAlignment="Left"
+                                    Click="CloudResetLocal_Click"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </TabItem>
+
             <TabItem Header="Catalog Sources" Style="{StaticResource SidebarTabItem}">
                 <Border Style="{StaticResource ContentPanel}" Padding="20">
                     <Grid>
