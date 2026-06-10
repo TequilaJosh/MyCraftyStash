@@ -64,6 +64,7 @@ namespace MyCraftyStash.Views
             LoadTrackedItemsTab();
             await LoadProjectTrackedItemsTabAsync();
             LoadCatalogSourcesTab();
+            LoadCloudSyncTab();
             _isLoadingSettings = false;
         }
 
@@ -988,5 +989,228 @@ namespace MyCraftyStash.Views
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    // ─────────────────────────────────────────────── Cloud Sync tab handlers
+    //
+    // No separate ViewModel — keeps the dialog's existing handler-driven
+    // pattern. CloudSyncService owns all settings I/O and the sync loop; this
+    // partial just wires UI events to it and reflects state back to the
+    // controls.
+    public partial class SettingsDialog
+    {
+        // Default endpoint we suggest to users on first load. They can change
+        // it in case they're on a preview slot or a custom domain.
+        private const string DefaultCloudEndpoint =
+            "https://wonderful-meadow-0a1a40110.7.azurestaticapps.net";
+
+        // Token for the active sync run, if any. Cancel button cancels this.
+        private System.Threading.CancellationTokenSource? _cloudSyncCts;
+
+        private void LoadCloudSyncTab()
+        {
+            try
+            {
+                var settings = CloudSyncService.Load();
+                CloudEndpointBox.Text = string.IsNullOrEmpty(settings.EndpointUrl)
+                    ? DefaultCloudEndpoint
+                    : settings.EndpointUrl;
+                // Never re-populate the PasswordBox with the saved key; presence
+                // is communicated by the status text instead. This keeps the
+                // plaintext out of process memory until the user types or syncs.
+                UpdateCloudKeyStatus(settings.HasApiKey);
+                UpdateCloudStatus(settings);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "SettingsDialog.LoadCloudSyncTab");
+                CloudStatusText.Text = "Could not load saved settings (see log).";
+            }
+        }
+
+        private void UpdateCloudKeyStatus(bool hasKey)
+        {
+            CloudKeyStatusText.Text = hasKey
+                ? "API key saved. Paste a new one above to replace it, or click Clear."
+                : "No API key saved.";
+        }
+
+        private void UpdateCloudStatus(MyCraftyStash.Models.CloudSyncSettings settings)
+        {
+            if (settings.LastSyncUtc is null)
+            {
+                CloudStatusText.Text = "Not yet synced.";
+                return;
+            }
+            var local = settings.LastSyncUtc.Value.ToLocalTime();
+            CloudStatusText.Text =
+                $"Last sync {local:yyyy-MM-dd HH:mm} local. " +
+                $"Uploaded {settings.LastSyncItemCount} item(s), {settings.LastSyncImageCount} image(s).";
+        }
+
+        private async void CloudTest_Click(object sender, RoutedEventArgs e)
+        {
+            var endpoint = CloudEndpointBox.Text?.Trim() ?? "";
+            // Use whatever's in the box if the user typed one, else the saved one.
+            var typedKey = CloudApiKeyBox.Password ?? "";
+            var keyToTest = !string.IsNullOrEmpty(typedKey)
+                ? typedKey
+                : CloudSyncService.LoadApiKey();
+
+            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(keyToTest))
+            {
+                CloudStatusText.Text = "Enter an endpoint and an API key before testing.";
+                return;
+            }
+
+            CloudTestButton.IsEnabled = false;
+            CloudStatusText.Text = "Testing...";
+            try
+            {
+                var who = await CloudSyncService.TestConnectionAsync(endpoint, keyToTest);
+                CloudStatusText.Text =
+                    $"Connected. Signed in as user {who.UserId}" +
+                    (string.IsNullOrEmpty(who.UserDetails) ? "" : $" ({who.UserDetails})") + ".";
+            }
+            catch (Exception ex)
+            {
+                CloudStatusText.Text = "Test failed: " + ex.Message;
+            }
+            finally
+            {
+                CloudTestButton.IsEnabled = true;
+            }
+        }
+
+        private void CloudSave_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                CloudSyncService.SaveEndpoint(CloudEndpointBox.Text);
+                var typed = CloudApiKeyBox.Password ?? "";
+                if (!string.IsNullOrEmpty(typed))
+                {
+                    CloudSyncService.SaveApiKey(typed);
+                    CloudApiKeyBox.Clear();           // wipe from UI memory
+                    UpdateCloudKeyStatus(true);
+                }
+                CloudStatusText.Text = "Settings saved.";
+                WasSaved = true;
+            }
+            catch (Exception ex)
+            {
+                CloudStatusText.Text = "Save failed: " + ex.Message;
+                LoggingService.LogError(ex, "SettingsDialog.CloudSave_Click");
+            }
+        }
+
+        private void CloudClearKey_Click(object sender, RoutedEventArgs e)
+        {
+            CloudSyncService.SaveApiKey(null);
+            CloudApiKeyBox.Clear();
+            UpdateCloudKeyStatus(false);
+            CloudStatusText.Text = "API key cleared.";
+        }
+
+        private async void CloudSync_Click(object sender, RoutedEventArgs e)
+        {
+            // If the user typed a new key into the box without hitting Save,
+            // save it first so the sync can pick it up. Common flow: first-
+            // time setup is paste + Sync, never clicking Save explicitly.
+            try
+            {
+                CloudSyncService.SaveEndpoint(CloudEndpointBox.Text);
+                var typed = CloudApiKeyBox.Password ?? "";
+                if (!string.IsNullOrEmpty(typed))
+                {
+                    CloudSyncService.SaveApiKey(typed);
+                    CloudApiKeyBox.Clear();
+                    UpdateCloudKeyStatus(true);
+                }
+            }
+            catch (Exception ex)
+            {
+                CloudStatusText.Text = "Could not save settings before sync: " + ex.Message;
+                return;
+            }
+
+            _cloudSyncCts = new System.Threading.CancellationTokenSource();
+            CloudSyncButton.IsEnabled = false;
+            CloudTestButton.IsEnabled = false;
+            CloudSaveButton.IsEnabled = false;
+            CloudCancelButton.IsEnabled = true;
+            CloudProgressBar.Visibility = Visibility.Visible;
+            CloudProgressBar.Value = 0;
+            CloudStatusText.Text = "Starting sync...";
+
+            var progress = new Progress<CloudSyncService.SyncProgress>(p =>
+            {
+                CloudStatusText.Text = p.Stage;
+                CloudProgressBar.Value = p.Percent;
+            });
+
+            try
+            {
+                var result = await Task.Run(() =>
+                    CloudSyncService.SyncAllAsync(progress, _cloudSyncCts.Token));
+
+                if (result.Errors.Count == 0)
+                {
+                    CloudStatusText.Text =
+                        $"Sync complete. Uploaded {result.ItemsUploaded} of {result.ItemsScanned} item(s), " +
+                        $"{result.ImagesUploaded} image(s). " +
+                        $"{result.ItemsSkippedUnchanged} unchanged.";
+                }
+                else
+                {
+                    CloudStatusText.Text =
+                        $"Sync finished with {result.Errors.Count} error(s). " +
+                        $"Uploaded {result.ItemsUploaded} item(s), {result.ImagesUploaded} image(s). " +
+                        $"First error: {result.Errors[0]}";
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                CloudStatusText.Text = "Sync cancelled. Progress was saved up to the last completed batch.";
+            }
+            catch (Exception ex)
+            {
+                CloudStatusText.Text = "Sync failed: " + ex.Message;
+                LoggingService.LogError(ex, "SettingsDialog.CloudSync_Click");
+            }
+            finally
+            {
+                CloudCancelButton.IsEnabled = false;
+                CloudSyncButton.IsEnabled = true;
+                CloudTestButton.IsEnabled = true;
+                CloudSaveButton.IsEnabled = true;
+                CloudProgressBar.Visibility = Visibility.Collapsed;
+                _cloudSyncCts?.Dispose();
+                _cloudSyncCts = null;
+            }
+        }
+
+        private void CloudCancel_Click(object sender, RoutedEventArgs e)
+        {
+            try { _cloudSyncCts?.Cancel(); } catch { /* already disposed */ }
+            CloudStatusText.Text = "Cancelling...";
+        }
+
+        private void CloudResetLocal_Click(object sender, RoutedEventArgs e)
+        {
+            var ok = MessageBox.Show(
+                "Reset local sync state? The next sync will re-upload every item. " +
+                "Your API key will also be cleared and you'll need to paste it again. " +
+                "Nothing is deleted from the cloud.",
+                "Reset Cloud Sync",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning);
+            if (ok != MessageBoxResult.OK) return;
+
+            CloudSyncService.ClearLocalState();
+            CloudApiKeyBox.Clear();
+            UpdateCloudKeyStatus(false);
+            CloudStatusText.Text = "Local sync state cleared.";
+        }
     }
 }
