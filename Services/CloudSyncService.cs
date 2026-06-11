@@ -47,9 +47,16 @@ namespace MyCraftyStash.Services
         private const string KeyLastImages   = "CloudSync.LastSyncImages";
         private const string KeyItemHashes   = "CloudSync.ItemHashes";
 
-        // Per-batch ceiling matches the server side (UploadFunction.MaxItemsPerBatch).
-        // Keeping these aligned avoids the awkward "1 of 5 batches rejected" case.
-        private const int ItemsPerBatch = 200;
+        // Server cap is 200 (UploadFunction.MaxItemsPerBatch); we send half
+        // that. SWA managed functions abort any request that takes longer
+        // than 45 seconds, so smaller batches keep each request well clear
+        // of the ceiling even when the SQL tier is cold or busy.
+        private const int ItemsPerBatch = 100;
+
+        // One retry after a short pause covers Function cold starts and
+        // transient 500s without turning a genuinely broken deploy into a
+        // long hang.
+        private const int BatchRetryDelayMs = 3000;
 
         // Max edge for re-encoded image. 1200 hits a sweet spot for phone
         // viewing without bloating storage; raising this is a settings choice
@@ -277,7 +284,12 @@ namespace MyCraftyStash.Services
                     result.ItemsSkippedUnchanged++;
             }
 
-            // 3. Upload changed items in batches.
+            // 3. Upload changed items in batches. Track which ids actually
+            //    made it: image uploads are gated on this, because the server
+            //    404s an image whose item row doesn't exist yet. Without the
+            //    gate, one failed batch of 100 items used to cascade into 100
+            //    noisy image errors.
+            var uploadedIds = new HashSet<int>();
             if (changed.Count > 0)
             {
                 progress?.Report(new SyncProgress
@@ -293,13 +305,23 @@ namespace MyCraftyStash.Services
 
                     try
                     {
-                        await UploadItemBatchAsync(endpoint!, apiKey, slice.Select(x => x.Item).ToList(), ct);
+                        await WithOneRetryAsync(
+                            () => UploadItemBatchAsync(endpoint!, apiKey, slice.Select(x => x.Item).ToList(), ct),
+                            $"item batch {i}", ct);
                         result.ItemsUploaded += slice.Count;
 
                         // Commit hashes for this batch only after the server
-                        // ACKs it. A crash between batches means we redo this
-                        // batch on resume; never lose track of further ones.
-                        foreach (var (item, hash) in slice) hashes[item.Id] = hash;
+                        // ACKs it, and only for items with no image to send.
+                        // Image-bearing items get their hash committed after
+                        // the image also lands (step 4); otherwise a failed
+                        // image upload would be silently skipped on the next
+                        // run because the hash already matched.
+                        foreach (var (item, hash) in slice)
+                        {
+                            uploadedIds.Add(item.Id);
+                            if (!HasInlineImage(item.ImageUrl))
+                                hashes[item.Id] = hash;
+                        }
                         PersistHashes(hashes);
                     }
                     catch (Exception ex)
@@ -317,8 +339,10 @@ namespace MyCraftyStash.Services
                 }
             }
 
-            // 4. Upload images for changed items that have one.
-            var withImages = changed.Where(x => HasInlineImage(x.Item.ImageUrl)).ToList();
+            // 4. Upload images, but only for items whose row upload succeeded.
+            var withImages = changed
+                .Where(x => uploadedIds.Contains(x.Item.Id) && HasInlineImage(x.Item.ImageUrl))
+                .ToList();
             if (withImages.Count > 0)
             {
                 progress?.Report(new SyncProgress
@@ -328,7 +352,7 @@ namespace MyCraftyStash.Services
                 });
 
                 int done = 0;
-                foreach (var (item, _) in withImages)
+                foreach (var (item, hash) in withImages)
                 {
                     ct.ThrowIfCancellationRequested();
                     try
@@ -336,9 +360,17 @@ namespace MyCraftyStash.Services
                         var bytes = ReEncode(item.ImageUrl!);
                         if (bytes is not null)
                         {
-                            await UploadImageAsync(endpoint!, apiKey, item.Id, "primary", bytes, ct);
+                            await WithOneRetryAsync(
+                                () => UploadImageAsync(endpoint!, apiKey, item.Id, "primary", bytes, ct),
+                                $"image item {item.Id}", ct);
                             result.ImagesUploaded++;
                         }
+
+                        // Item row + image both confirmed (or the image was
+                        // undecodable and will never succeed): commit the hash
+                        // so this item is skipped next run.
+                        hashes[item.Id] = hash;
+                        PersistHashes(hashes);
                     }
                     catch (Exception ex)
                     {
@@ -372,6 +404,28 @@ namespace MyCraftyStash.Services
 
         // ── HTTP helpers ────────────────────────────────────────────────────
 
+        /// <summary>Runs the action; on failure waits briefly and tries once
+        /// more. Covers Function cold starts and transient 500s. Cancellation
+        /// is never retried.</summary>
+        private static async Task WithOneRetryAsync(
+            Func<Task> action, string label, CancellationToken ct)
+        {
+            try
+            {
+                await action();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning($"CloudSyncService: {label} failed, retrying once. {ex.Message}");
+                await Task.Delay(BatchRetryDelayMs, ct);
+                await action();
+            }
+        }
+
         private static async Task UploadItemBatchAsync(
             string endpoint, string apiKey, List<Item> items, CancellationToken ct)
         {
@@ -402,7 +456,14 @@ namespace MyCraftyStash.Services
             using var req = new HttpRequestMessage(HttpMethod.Post,
                 NormalizeEndpoint(endpoint) + "/api/upload/items");
             req.Headers.Add("X-Api-Key", apiKey);
-            req.Content = JsonContent.Create(payload, options: _jsonOpts);
+            // Serialize up front and send as StringContent so the request
+            // carries a Content-Length header. JsonContent streams with
+            // Transfer-Encoding: chunked, and the Static Web Apps proxy
+            // rejects chunked bodies to managed functions with an instant
+            // 500 "Backend call failure". Cost us a whole evening; verified
+            // by an A/B test of the identical payload both ways.
+            var json = JsonSerializer.Serialize(payload, _jsonOpts);
+            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             using var resp = await _http.Value.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
