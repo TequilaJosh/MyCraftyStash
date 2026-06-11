@@ -33,9 +33,10 @@ namespace MyCraftyStash.Services
 
     /// <summary>
     /// GitHub-Releases-based updater. Replaces the old network-share flow
-    /// (\\Win-u5iq2hisnh3\e\Installation + version.txt): the app now checks
-    /// the public repo's latest release, downloads the Inno Setup installer
-    /// asset to %TEMP%, and launches it after the user says yes.
+    /// (which pointed at J and H Inventory's install share and could offer
+    /// the wrong app's installer): the app now checks the public repo's
+    /// latest release, downloads the Inno Setup installer asset to %TEMP%,
+    /// and launches it after the user says yes.
     ///
     /// Releases are created by Installer\publish.ps1 (gh release create) with
     /// tag vX.Y.Z.W and a MyCraftyStash_Setup_X.Y.Z.W.exe asset. Release-note

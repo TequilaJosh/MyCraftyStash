@@ -14,9 +14,9 @@
        on startup, offers to download, and launches the installer. Release
        notes come from the matching section of Installer\changelog.txt and
        feed the in-app "What's New" popup, so keep that file current.
-    5. (Optional, -IncludeShare) Also copy setup.exe + version.txt to the old
-       \\Win-u5iq2hisnh3\e\Installation share for machines still running a
-       pre-GitHub build of the updater.
+    NOTE: the \\Win-u5iq2hisnh3 network share belongs to J and H Inventory's
+    updater. MCS must never publish there: an MCS build on that share (or
+    vice versa) makes one app offer the other app's installer as an "update".
 
     Usage (from repo root or anywhere):
         .\Installer\publish.ps1
@@ -27,7 +27,6 @@
         .\Installer\publish.ps1 -SkipBump                # republish current version
         .\Installer\publish.ps1 -SkipPublish             # iscc + release only
         .\Installer\publish.ps1 -SkipGitHub              # build locally, no release
-        .\Installer\publish.ps1 -IncludeShare            # legacy network-share copy too
         .\Installer\publish.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 #>
 
@@ -39,7 +38,6 @@ param(
     [switch]$SkipBump,
     [switch]$SkipPublish,
     [switch]$SkipGitHub,
-    [switch]$IncludeShare,
     [string]$IsccPath
 )
 
@@ -51,10 +49,6 @@ $issPath       = Join-Path $PSScriptRoot 'MyCraftyStash.iss'
 $publishDir    = Join-Path $repoRoot 'bin\Release\net8.0-windows10.0.19041.0\win-x64\publish'
 $exePath       = Join-Path $publishDir 'MyCraftyStash.exe'
 $installerOut  = Join-Path $PSScriptRoot 'output'
-$installShare    = '\\Win-u5iq2hisnh3\e\Installation'
-$shareSetup      = Join-Path $installShare 'setup.exe'
-$shareVersion    = Join-Path $installShare 'version.txt'
-$shareChangelog  = Join-Path $installShare 'changelog.txt'
 $localChangelog  = Join-Path $PSScriptRoot 'changelog.txt'
 
 if (-not (Test-Path $csproj)) {
@@ -231,27 +225,6 @@ else {
         Remove-Item $notesFile -ErrorAction SilentlyContinue
     }
     Write-Host "==> Release published: https://github.com/TequilaJosh/MyCraftyStash/releases/tag/$tag" -ForegroundColor Green
-}
-
-# ── 6. Legacy: copy to the network share for pre-GitHub updater builds ──────
-if ($IncludeShare) {
-    if (-not (Test-Path $installShare)) {
-        Write-Warning "Install share $installShare is not reachable - skipping share publish."
-    }
-    else {
-        Write-Host "==> Copying setup.exe to share (legacy) ..." -ForegroundColor Cyan
-        Copy-Item -Path $versionedSetup -Destination $shareSetup -Force
-
-        Write-Host "==> Writing version.txt = $fileVersion" -ForegroundColor Cyan
-        # Plain ASCII, no BOM - the old UpdateService trims and Version.TryParse's,
-        # which would choke on a UTF-8 BOM.
-        [System.IO.File]::WriteAllText($shareVersion, $fileVersion, [System.Text.Encoding]::ASCII)
-
-        if (Test-Path $localChangelog) {
-            Write-Host "==> Copying changelog.txt to share ..." -ForegroundColor Cyan
-            Copy-Item -Path $localChangelog -Destination $shareChangelog -Force
-        }
-    }
 }
 
 Write-Host ""
