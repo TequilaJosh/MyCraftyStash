@@ -123,6 +123,15 @@ else {
 
 # ── 2. Publish (single-file, self-contained, win-x64) ────────────────────────
 if (-not $SkipPublish) {
+    # Explicit RID-aware restore first. A normal Debug build leaves
+    # obj\project.assets.json restored WITHOUT win-x64, and publish then dies
+    # with NETSDK1047 ("assets file doesn't have a target for ...win-x64")
+    # instead of re-restoring. Forcing the restore makes publish reliable no
+    # matter what built last.
+    Write-Host "==> dotnet restore (win-x64) ..." -ForegroundColor Cyan
+    & dotnet restore $csproj -r win-x64
+    if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed (exit $LASTEXITCODE)" }
+
     Write-Host "==> dotnet publish ..." -ForegroundColor Cyan
     & dotnet publish $csproj `
         -c Release `
