@@ -51,35 +51,38 @@ namespace MyCraftyStash.Views
         private async void CheckForUpdatesButton_Click(object sender, RoutedEventArgs e)
         {
             CheckForUpdatesButton.IsEnabled = false;
-            UpdateStatusText.Text = "Checking for updates...";
+            UpdateStatusText.Text = "Checking GitHub for updates...";
 
-            var (updateAvailable, latestVersion, installerPath, error) =
-                await System.Threading.Tasks.Task.Run(() => UpdateService.CheckForUpdates());
+            var check = await UpdateService.CheckForUpdatesAsync();
 
-            if (error != null)
+            if (check.Error != null)
             {
-                UpdateStatusText.Text = error;
+                UpdateStatusText.Text = check.Error;
                 CheckForUpdatesButton.IsEnabled = true;
                 return;
             }
 
             var current = UpdateService.GetCurrentVersion();
 
-            if (!updateAvailable || installerPath == null)
+            if (!check.UpdateAvailable || check.AssetUrl == null)
             {
                 UpdateStatusText.Text = $"You're up to date (version {current}).";
                 CheckForUpdatesButton.IsEnabled = true;
                 return;
             }
 
-            UpdateStatusText.Text = $"Update available: {latestVersion}.";
+            UpdateStatusText.Text = $"Update available: {check.LatestVersion}.";
 
+            var sizeMb = check.AssetSizeBytes > 0
+                ? $" (~{check.AssetSizeBytes / 1048576.0:0} MB)"
+                : "";
             var prompt = MessageBox.Show(
                 this,
-                $"A new version of J and H Inventory is available.\n\n" +
+                $"A new version of My Crafty Stash is available.\n\n" +
                 $"   Installed:  {current}\n" +
-                $"   Available:  {latestVersion}\n\n" +
-                "Install the update now? The app will close and the installer will launch.",
+                $"   Available:  {check.LatestVersion}\n\n" +
+                $"Download and install it now{sizeMb}? " +
+                "The app will close when the installer starts.",
                 "Update available",
                 MessageBoxButton.YesNo, MessageBoxImage.Information,
                 MessageBoxResult.Yes);
@@ -90,7 +93,20 @@ namespace MyCraftyStash.Views
                 return;
             }
 
-            var (success, applyError) = UpdateService.ApplyUpdate(installerPath);
+            var dlg = new UpdateDownloadDialog(check.AssetUrl, check.AssetName ?? "MyCraftyStash_Setup.exe")
+            {
+                Owner = this,
+            };
+            if (dlg.ShowDialog() != true || dlg.InstallerPath == null)
+            {
+                UpdateStatusText.Text = string.IsNullOrEmpty(dlg.ErrorMessage)
+                    ? "Download did not complete."
+                    : dlg.ErrorMessage;
+                CheckForUpdatesButton.IsEnabled = true;
+                return;
+            }
+
+            var (success, applyError) = UpdateService.ApplyUpdate(dlg.InstallerPath);
             if (!success)
             {
                 UpdateStatusText.Text = $"Could not launch the installer: {applyError}";

@@ -8,11 +8,15 @@
     2. dotnet publish (Release, win-x64, self-contained, single-file).
     3. Run Inno Setup compiler against Installer\MyCraftyStash.iss
        - emits  Installer\output\MyCraftyStash_Setup_X.Y.Z.W.exe
-    4. Copy that versioned setup to \\Win-u5iq2hisnh3\e\Installation\setup.exe
-       and write version.txt next to it. The in-app updater (App.xaml.cs +
-       Services\UpdateService.cs) reads version.txt on startup, compares to
-       the running assembly version, and offers to launch setup.exe when a
-       newer build is available.
+    4. Create a GitHub release (tag vX.Y.Z.W) with the installer attached.
+       The in-app updater (App.xaml.cs + Services\UpdateService.cs) polls
+       https://api.github.com/repos/TequilaJosh/MyCraftyStash/releases/latest
+       on startup, offers to download, and launches the installer. Release
+       notes come from the matching section of Installer\changelog.txt and
+       feed the in-app "What's New" popup, so keep that file current.
+    5. (Optional, -IncludeShare) Also copy setup.exe + version.txt to the old
+       \\Win-u5iq2hisnh3\e\Installation share for machines still running a
+       pre-GitHub build of the updater.
 
     Usage (from repo root or anywhere):
         .\Installer\publish.ps1
@@ -21,8 +25,9 @@
         .\Installer\publish.ps1 -BumpPart Major          # bump X.0.0.0
         .\Installer\publish.ps1 -SetVersion "1.0.3.0"    # explicit version
         .\Installer\publish.ps1 -SkipBump                # republish current version
-        .\Installer\publish.ps1 -SkipPublish             # iscc + share copy only
-        .\Installer\publish.ps1 -SkipShare               # build locally, don't touch the share
+        .\Installer\publish.ps1 -SkipPublish             # iscc + release only
+        .\Installer\publish.ps1 -SkipGitHub              # build locally, no release
+        .\Installer\publish.ps1 -IncludeShare            # legacy network-share copy too
         .\Installer\publish.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 #>
 
@@ -33,7 +38,8 @@ param(
     [string]$SetVersion,
     [switch]$SkipBump,
     [switch]$SkipPublish,
-    [switch]$SkipShare,
+    [switch]$SkipGitHub,
+    [switch]$IncludeShare,
     [string]$IsccPath
 )
 
@@ -164,41 +170,84 @@ if (-not (Test-Path $versionedSetup)) {
 }
 Write-Host "==> Built installer: $versionedSetup" -ForegroundColor Green
 
-# ── 5. Push setup.exe + version.txt to the share for the in-app updater ─────
-if ($SkipShare) {
-    Write-Host "==> Skipping share publish (-SkipShare)" -ForegroundColor DarkYellow
+# ── 5. Create the GitHub release the in-app updater looks for ───────────────
+function Get-ChangelogSection {
+    param([string]$ChangelogPath, [string]$Version)
+    # Returns the bullet block under the "## $Version" header, or $null.
+    if (-not (Test-Path $ChangelogPath)) { return $null }
+    $lines = Get-Content $ChangelogPath
+    $collecting = $false
+    $section = @()
+    foreach ($line in $lines) {
+        if ($line -match '^\s*(?:#{1,6}\s*|=+\s*)?v?(\d+\.\d+\.\d+(?:\.\d+)?)\s*=*\s*$') {
+            if ($collecting) { break }                  # hit the next version header
+            $collecting = ($Matches[1] -eq $Version)
+            continue
+        }
+        if ($collecting -and $line.Trim().Length -gt 0) { $section += $line }
+    }
+    if ($section.Count -eq 0) { return $null }
+    return ($section -join "`n")
 }
-elseif (-not (Test-Path $installShare)) {
-    Write-Warning "Install share $installShare is not reachable - skipping share publish. Connect to the network and re-run with -SkipPublish -SkipBump to push the existing build."
+
+if ($SkipGitHub) {
+    Write-Host "==> Skipping GitHub release (-SkipGitHub)" -ForegroundColor DarkYellow
 }
 else {
-    Write-Host "==> Copying setup.exe to share ..." -ForegroundColor Cyan
-    Copy-Item -Path $versionedSetup -Destination $shareSetup -Force
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        throw "GitHub CLI (gh) not found. Install from https://cli.github.com or re-run with -SkipGitHub."
+    }
 
-    Write-Host "==> Writing version.txt = $fileVersion" -ForegroundColor Cyan
-    # Plain ASCII, no BOM - UpdateService trims and Version.TryParse's,
-    # which would choke on a UTF-8 BOM.
-    [System.IO.File]::WriteAllText($shareVersion, $fileVersion, [System.Text.Encoding]::ASCII)
+    $tag = "v$fileVersion"
+    $notes = Get-ChangelogSection -ChangelogPath $localChangelog -Version $fileVersion
+    if (-not $notes) {
+        Write-Warning "No '## $fileVersion' section in Installer\changelog.txt - the release (and the in-app What's New popup) will have generic notes. Add a section and re-run with -SkipBump -SkipPublish to fix."
+        $notes = "My Crafty Stash $fileVersion"
+    }
 
-    # Push the release-notes file too so the in-app "What's New" popup has
-    # something to read on next launch. Skipped silently when there's no
-    # local changelog.txt (you can still publish without one).
-    if (Test-Path $localChangelog) {
-        Write-Host "==> Copying changelog.txt to share ..." -ForegroundColor Cyan
-        Copy-Item -Path $localChangelog -Destination $shareChangelog -Force
+    # gh release create fails if the tag already exists - that's the guard
+    # against accidentally re-publishing over a shipped version. Use
+    # 'gh release delete' + re-run if you really mean to replace one.
+    Write-Host "==> Creating GitHub release $tag ..." -ForegroundColor Cyan
+    $notesFile = Join-Path $env:TEMP "mcs_release_notes_$fileVersion.md"
+    [System.IO.File]::WriteAllText($notesFile, $notes, (New-Object System.Text.UTF8Encoding($false)))
+    try {
+        & gh release create $tag $versionedSetup `
+            --repo TequilaJosh/MyCraftyStash `
+            --title "My Crafty Stash $fileVersion" `
+            --notes-file $notesFile
+        if ($LASTEXITCODE -ne 0) { throw "gh release create failed (exit $LASTEXITCODE)" }
+    }
+    finally {
+        Remove-Item $notesFile -ErrorAction SilentlyContinue
+    }
+    Write-Host "==> Release published: https://github.com/TequilaJosh/MyCraftyStash/releases/tag/$tag" -ForegroundColor Green
+}
+
+# ── 6. Legacy: copy to the network share for pre-GitHub updater builds ──────
+if ($IncludeShare) {
+    if (-not (Test-Path $installShare)) {
+        Write-Warning "Install share $installShare is not reachable - skipping share publish."
     }
     else {
-        Write-Warning "No Installer\changelog.txt found - skipping notes upload. Add one before publishing if you want users to see release notes."
+        Write-Host "==> Copying setup.exe to share (legacy) ..." -ForegroundColor Cyan
+        Copy-Item -Path $versionedSetup -Destination $shareSetup -Force
+
+        Write-Host "==> Writing version.txt = $fileVersion" -ForegroundColor Cyan
+        # Plain ASCII, no BOM - the old UpdateService trims and Version.TryParse's,
+        # which would choke on a UTF-8 BOM.
+        [System.IO.File]::WriteAllText($shareVersion, $fileVersion, [System.Text.Encoding]::ASCII)
+
+        if (Test-Path $localChangelog) {
+            Write-Host "==> Copying changelog.txt to share ..." -ForegroundColor Cyan
+            Copy-Item -Path $localChangelog -Destination $shareChangelog -Force
+        }
     }
 }
 
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "  Local installer:  $versionedSetup"
-if (-not $SkipShare -and (Test-Path $shareSetup)) {
-    Write-Host "  Share setup.exe:  $shareSetup"
-    Write-Host "  Share version:    $fileVersion"
-    if (Test-Path $shareChangelog) {
-        Write-Host "  Share changelog:  $shareChangelog"
-    }
+if (-not $SkipGitHub) {
+    Write-Host "  GitHub release:   https://github.com/TequilaJosh/MyCraftyStash/releases/tag/v$fileVersion"
 }
