@@ -456,7 +456,14 @@ namespace MyCraftyStash.Services
             using var req = new HttpRequestMessage(HttpMethod.Post,
                 NormalizeEndpoint(endpoint) + "/api/upload/items");
             req.Headers.Add("X-Api-Key", apiKey);
-            req.Content = JsonContent.Create(payload, options: _jsonOpts);
+            // Serialize up front and send as StringContent so the request
+            // carries a Content-Length header. JsonContent streams with
+            // Transfer-Encoding: chunked, and the Static Web Apps proxy
+            // rejects chunked bodies to managed functions with an instant
+            // 500 "Backend call failure". Cost us a whole evening; verified
+            // by an A/B test of the identical payload both ways.
+            var json = JsonSerializer.Serialize(payload, _jsonOpts);
+            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             using var resp = await _http.Value.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
