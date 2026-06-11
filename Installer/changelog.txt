@@ -1,14 +1,33 @@
-# J and H Inventory — Release Notes
+# My Crafty Stash — Release Notes
 #
-# This file is read by the in-app "What's New" popup after each successful
-# update. The publish script copies it to the install share so every user
-# sees the same notes when their app updates itself.
+# This file feeds the GitHub release notes (publish.ps1 pulls the matching
+# "## X.Y.Z.W" section into "gh release create"), and the in-app "What's New"
+# popup renders those same release notes after each successful update.
 #
 # Format reminder (full docs in changelog.example.txt):
 #   ## X.Y.Z.W              <- version header (most-recent FIRST)
 #   - Bullet                <- one short bullet per change
 #
 # New sections go ABOVE older ones.
+
+## 1.0.2.12
+- Fixes Cloud Sync uploads failing with a server error on every batch.
+  If 1.0.2.11 told you "Sync finished with errors", this update gets your
+  items flowing to the website.
+
+## 1.0.2.11
+- View your stash online! Sign in at the My Crafty Stash website with
+  Google and your full inventory is there in a searchable photo grid —
+  on your phone in the craft store, at a friend's table, anywhere. Tap
+  any item for the full picture, stock level, sentiments, and details.
+- New Cloud Sync tab in Settings makes it happen: paste an API key from
+  the website's Keys page, hit Test connection, then Sync now. A progress
+  bar walks through items and photos, and after the first sync only
+  changed items re-upload, so a re-sync takes seconds. Your desktop app
+  stays the source of truth; the web view is read-only.
+- App updates now come straight from GitHub. The app checks for a new
+  release on startup, and if you say yes it downloads the installer with
+  a progress bar and launches it for you — no network share needed.
 
 ## 1.0.2.9
 - "Look Up TE Item" now warns you when a catalog item is already in your
