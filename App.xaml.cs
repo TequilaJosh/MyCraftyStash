@@ -55,9 +55,9 @@ namespace MyCraftyStash
                 }
             }));
 
-            // Check the network share for a newer installer build, fire-and-forget
-            // so a slow / offline share doesn't block startup. Honours the user's
-            // CheckForUpdatesOnStartup preference (Settings → Updates).
+            // Check GitHub Releases for a newer build, fire-and-forget so a
+            // slow / offline connection doesn't block startup. Honours the
+            // user's CheckForUpdatesOnStartup preference (Settings → Updates).
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
             {
                 try
@@ -65,29 +65,47 @@ namespace MyCraftyStash
                     var settings = UpdateSettings.Load();
                     if (!settings.CheckForUpdatesOnStartup) return;
 
-                    Task.Run(() =>
+                    Task.Run(async () =>
                     {
-                        var (updateAvailable, latestVersion, installerPath, error) =
-                            UpdateService.CheckForUpdates();
-
-                        if (!updateAvailable || installerPath == null) return;
+                        var check = await UpdateService.CheckForUpdatesAsync();
+                        if (!check.UpdateAvailable || check.AssetUrl == null) return;
 
                         // Marshal back to UI thread for the prompt.
                         Dispatcher.Invoke(() =>
                         {
                             var current = UpdateService.GetCurrentVersion();
+                            var sizeMb = check.AssetSizeBytes > 0
+                                ? $" (~{check.AssetSizeBytes / 1048576.0:0} MB)"
+                                : "";
                             var result = MessageBox.Show(
-                                $"A new version of J and H Inventory is available.\n\n" +
+                                $"A new version of My Crafty Stash is available.\n\n" +
                                 $"   Installed:  {current}\n" +
-                                $"   Available:  {latestVersion}\n\n" +
-                                "Install the update now? The app will close and the installer will launch.",
+                                $"   Available:  {check.LatestVersion}\n\n" +
+                                $"Download and install it now{sizeMb}? " +
+                                "The app will close when the installer starts.",
                                 "Update available",
                                 MessageBoxButton.YesNo, MessageBoxImage.Information,
                                 MessageBoxResult.Yes);
 
                             if (result != MessageBoxResult.Yes) return;
 
-                            var (success, applyError) = UpdateService.ApplyUpdate(installerPath);
+                            var dlg = new Views.UpdateDownloadDialog(check.AssetUrl, check.AssetName ?? "MyCraftyStash_Setup.exe")
+                            {
+                                Owner = Current.MainWindow,
+                            };
+                            if (dlg.ShowDialog() != true || dlg.InstallerPath == null)
+                            {
+                                if (!string.IsNullOrEmpty(dlg.ErrorMessage) && dlg.ErrorMessage != "Download cancelled.")
+                                {
+                                    MessageBox.Show(
+                                        $"Could not download the update:\n\n{dlg.ErrorMessage}",
+                                        "Update failed",
+                                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                                }
+                                return;
+                            }
+
+                            var (success, applyError) = UpdateService.ApplyUpdate(dlg.InstallerPath);
                             if (!success)
                             {
                                 MessageBox.Show(
@@ -137,11 +155,12 @@ namespace MyCraftyStash
                         return;
                     }
 
-                    // Genuine upgrade — pull notes off the share and (only if any
-                    // entries actually exist for the upgraded range) show the dialog.
-                    Task.Run(() =>
+                    // Genuine upgrade — pull notes from the GitHub release bodies
+                    // and (only if any entries actually exist for the upgraded
+                    // range) show the dialog.
+                    Task.Run(async () =>
                     {
-                        var entries = UpdateService.GetReleaseNotesSince(lastShown, current);
+                        var entries = await UpdateService.GetReleaseNotesSinceAsync(lastShown, current);
                         if (entries.Count == 0)
                         {
                             // No notes for this range — still record the version
