@@ -1000,9 +1000,11 @@ namespace MyCraftyStash.Views
     public partial class SettingsDialog
     {
         // Default endpoint we suggest to users on first load. They can change
-        // it in case they're on a preview slot or a custom domain.
+        // it in case they're on a preview slot. The old
+        // wonderful-meadow-0a1a40110.7.azurestaticapps.net address still works
+        // (it's the same app); the custom domain is just the friendly name.
         private const string DefaultCloudEndpoint =
-            "https://wonderful-meadow-0a1a40110.7.azurestaticapps.net";
+            "https://mycraftystash.com";
 
         // Token for the active sync run, if any. Cancel button cancels this.
         private System.Threading.CancellationTokenSource? _cloudSyncCts;

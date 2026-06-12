@@ -1051,7 +1051,7 @@
                                      Foreground="{DynamicResource TextBrush}"
                                      BorderBrush="{DynamicResource BorderBrush}"
                                      Padding="8,6"/>
-                            <TextBlock Text="The base URL of your Static Web App. Usually https://wonderful-meadow-0a1a40110.7.azurestaticapps.net (or your custom domain). No trailing slash."
+                            <TextBlock Text="Where your stash lives on the web. Usually https://mycraftystash.com. No trailing slash."
                                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap" Margin="0,4,0,12"/>
 
