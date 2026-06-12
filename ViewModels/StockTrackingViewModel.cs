@@ -35,9 +35,16 @@ namespace MyCraftyStash.ViewModels
 
         public string StockDisplay => $"{CurrentStock} {UnitLabel} remaining";
 
-        public string StockColor => CurrentStock <= 0 ? "#EF4444"
-            : CurrentStock <= 5 ? "#F59E0B"
-            : "#22C55E";
+        // Color follows the per-type warning levels from Settings -> Tracked
+        // Items. Falls back to fixed cutoffs only when the type has no config
+        // (shouldn't happen on this page, which lists tracked types only).
+        public string StockColor => InventoryService.GetStockLevel(Type, CurrentStock) switch
+        {
+            InventoryService.StockLevel.Out => "#EF4444",
+            InventoryService.StockLevel.Low => "#F59E0B",
+            InventoryService.StockLevel.Good => "#22C55E",
+            _ => CurrentStock <= 0 ? "#EF4444" : CurrentStock <= 5 ? "#F59E0B" : "#22C55E",
+        };
     }
 
     /// <summary>Groups stock rows by type.</summary>

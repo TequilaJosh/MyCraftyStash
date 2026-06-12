@@ -10,6 +10,15 @@
 #
 # New sections go ABOVE older ones.
 
+## 1.0.2.13
+- Low / Out stock warnings now actually use the warning levels you set in
+  Settings > Tracked Items. The home dashboard was checking pack-size
+  percentages instead (so items without a pack size never showed up, even
+  at zero stock), and the Stock Tracking page colored everything with
+  fixed cutoffs. Both now follow your per-type Good / Low / Out numbers.
+- The LOW / OUT tile on the home page counts every low or out item, not
+  just the five shown in the Running Low list.
+
 ## 1.0.2.12
 - Fixes Cloud Sync uploads failing with a server error on every batch.
   If 1.0.2.11 told you "Sync finished with errors", this update gets your

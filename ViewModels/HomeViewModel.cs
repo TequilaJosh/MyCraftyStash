@@ -74,25 +74,39 @@ namespace MyCraftyStash.ViewModels
                 SentimentsIndexed = items.Count(i => !string.IsNullOrWhiteSpace(i.Sentiments));
 
                 RunningLow.Clear();
+                // Low/Out comes from the per-type warning levels the user set
+                // in Settings -> Tracked Items (via GetStockLevel), not from a
+                // pack-size percentage. The old percent-of-pack math silently
+                // ignored every item without a pack size, so even 0-stock
+                // items never showed up here.
                 var lowList = items
-                    .Where(i => InventoryService.IsTrackedType(i.Type) && i.CurrentStock.HasValue)
+                    .Where(i => i.CurrentStock.HasValue)
                     .Select(i => new
                     {
                         Item = i,
-                        Pct = i.PackSize.HasValue && i.PackSize.Value > 0
-                            ? (double)(i.CurrentStock ?? 0) / i.PackSize.Value
-                            : 1.0
+                        Level = InventoryService.GetStockLevel(i.Type, i.CurrentStock),
                     })
-                    .Where(x => x.Pct <= 0.30)
-                    .OrderBy(x => x.Pct)
-                    .Take(5)
+                    .Where(x => x.Level is InventoryService.StockLevel.Low
+                             or InventoryService.StockLevel.Out)
                     .ToList();
 
+                // The stat tile counts everything low or out; the list below
+                // it previews the five most urgent.
                 LowOrOutCount = lowList.Count;
-                foreach (var x in lowList)
+                foreach (var x in lowList
+                    .OrderBy(x => x.Level == InventoryService.StockLevel.Out ? 0 : 1)
+                    .ThenBy(x => x.Item.CurrentStock)
+                    .Take(5))
                 {
                     var i = x.Item;
-                    var pct = Math.Max(0, Math.Min(1, x.Pct));
+                    // Progress bar: fraction of the type's "good" threshold,
+                    // falling back to pack size when no threshold is set.
+                    double denom =
+                        InventoryService.TrackedTypeConfigs.TryGetValue(i.Type, out var cfg)
+                        && cfg.GoodThreshold is > 0
+                            ? cfg.GoodThreshold.Value
+                            : (i.PackSize is > 0 ? i.PackSize.Value : 1);
+                    var pct = Math.Max(0, Math.Min(1, (i.CurrentStock ?? 0) / denom));
                     RunningLow.Add(new HomeStatItem
                     {
                         Id = i.Id,
@@ -102,8 +116,8 @@ namespace MyCraftyStash.ViewModels
                         CurrentStock = i.CurrentStock,
                         PackSize = i.PackSize ?? 1,
                         StockPercent = pct * 100.0,
-                        IsOut = (i.CurrentStock ?? 0) <= 0,
-                        StockLabel = (i.CurrentStock ?? 0) <= 0 ? "Out" : "Low"
+                        IsOut = x.Level == InventoryService.StockLevel.Out,
+                        StockLabel = x.Level == InventoryService.StockLevel.Out ? "Out" : "Low"
                     });
                 }
 
