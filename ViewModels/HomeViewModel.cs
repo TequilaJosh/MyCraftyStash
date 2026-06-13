@@ -46,10 +46,20 @@ namespace MyCraftyStash.ViewModels
         public ObservableCollection<HomeStatItem> RunningLow { get; } = new();
         public ObservableCollection<HomeRecentProject> RecentProjects { get; } = new();
 
+        // True only on the very first launch after install. Captured once so
+        // the greeting doesn't flip mid-session (ApplyGreeting runs more than
+        // once per load), and persisted so later launches say "Welcome back".
+        private readonly bool _isFirstEverLaunch;
+        private const string SeenWelcomeKey = "Home.SeenWelcome";
+
         public HomeViewModel(InventoryService service, MainViewModel main)
         {
             _service = service;
             _main = main;
+
+            _isFirstEverLaunch = string.IsNullOrEmpty(UserSettingsService.GetSettingValue(SeenWelcomeKey));
+            if (_isFirstEverLaunch)
+                UserSettingsService.SetSettingValue(SeenWelcomeKey, "1");
         }
 
         public async Task LoadAsync()
@@ -59,13 +69,17 @@ namespace MyCraftyStash.ViewModels
             await RefreshAsync();
         }
 
-        /// <summary>Sets the welcome line from the cached cloud first name.
-        /// "Welcome {name}" when Cloud Sync is set up and the website has been
-        /// visited signed in; "Welcome back" otherwise.</summary>
+        /// <summary>Sets the welcome line. "Welcome {name}" when Cloud Sync is
+        /// set up and the website has been visited signed in; otherwise
+        /// "Welcome to My Crafty Stash" on the very first launch, and
+        /// "Welcome back" on every launch after that.</summary>
         private void ApplyGreeting()
         {
             var name = CloudSyncService.GetCachedFirstName();
-            UserGreeting = string.IsNullOrWhiteSpace(name) ? "Welcome back" : $"Welcome {name}";
+            if (!string.IsNullOrWhiteSpace(name))
+                UserGreeting = $"Welcome {name}";
+            else
+                UserGreeting = _isFirstEverLaunch ? "Welcome to My Crafty Stash" : "Welcome back";
         }
 
         // Pulls the latest first name from the cloud in the background, then

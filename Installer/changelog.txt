@@ -13,6 +13,8 @@
 ## 1.0.2.14
 - The Home page now greets you by name once Cloud Sync is set up. It uses
   the first name from the Google account you sign in with on the website.
+  Before that, it says "Welcome to My Crafty Stash" the first time you
+  open the app and "Welcome back" every time after.
 
 ## 1.0.2.13
 - Low / Out stock warnings now actually use the warning levels you set in
