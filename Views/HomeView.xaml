@@ -24,7 +24,7 @@
                             <TextBlock Style="{StaticResource Breadcrumb}" Text="Home"/>
                         </StackPanel>
                         <TextBlock Style="{StaticResource PageTitle}" Margin="0,4,0,0"
-                                   Text="Welcome Josh &amp; Heather"/>
+                                   Text="{Binding UserGreeting}"/>
                         <TextBlock Style="{StaticResource PageSubtitle}"
                                    Text="Here's what's happening in your craft room."/>
                     </StackPanel>

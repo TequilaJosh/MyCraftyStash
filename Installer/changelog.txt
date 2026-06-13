@@ -10,6 +10,10 @@
 #
 # New sections go ABOVE older ones.
 
+## 1.0.2.14
+- The Home page now greets you by name once Cloud Sync is set up. It uses
+  the first name from the Google account you sign in with on the website.
+
 ## 1.0.2.13
 - Low / Out stock warnings now actually use the warning levels you set in
   Settings > Tracked Items. The home dashboard was checking pack-size

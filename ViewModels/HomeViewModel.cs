@@ -59,8 +59,28 @@ namespace MyCraftyStash.ViewModels
             await RefreshAsync();
         }
 
+        /// <summary>Sets the welcome line from the cached cloud first name.
+        /// "Welcome {name}" when Cloud Sync is set up and the website has been
+        /// visited signed in; "Welcome back" otherwise.</summary>
+        private void ApplyGreeting()
+        {
+            var name = CloudSyncService.GetCachedFirstName();
+            UserGreeting = string.IsNullOrWhiteSpace(name) ? "Welcome back" : $"Welcome {name}";
+        }
+
+        // Pulls the latest first name from the cloud in the background, then
+        // updates the greeting. Awaits resume on the UI thread (no
+        // ConfigureAwait(false)) so the property change is marshalled correctly.
+        private async Task RefreshGreetingFromCloudAsync()
+        {
+            await CloudSyncService.TryRefreshFirstNameAsync();
+            ApplyGreeting();
+        }
+
         public async Task RefreshAsync()
         {
+            ApplyGreeting();
+            _ = RefreshGreetingFromCloudAsync();
             try
             {
                 IsLoading = true;

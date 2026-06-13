@@ -46,6 +46,7 @@ namespace MyCraftyStash.Services
         private const string KeyLastItems    = "CloudSync.LastSyncItems";
         private const string KeyLastImages   = "CloudSync.LastSyncImages";
         private const string KeyItemHashes   = "CloudSync.ItemHashes";
+        private const string KeyFirstName    = "CloudSync.FirstName";
 
         // Server cap is 200 (UploadFunction.MaxItemsPerBatch); we send half
         // that. SWA managed functions abort any request that takes longer
@@ -176,15 +177,18 @@ namespace MyCraftyStash.Services
             UserSettingsService.SetSettingValue(KeyLastItems, null);
             UserSettingsService.SetSettingValue(KeyLastImages, null);
             UserSettingsService.SetSettingValue(KeyItemHashes, null);
+            UserSettingsService.SetSettingValue(KeyFirstName, null);
         }
 
         // ── Network calls ───────────────────────────────────────────────────
 
-        public sealed record WhoAmIResult(string UserId, string? UserDetails, string? IdentityProvider);
+        public sealed record WhoAmIResult(
+            string UserId, string? UserDetails, string? IdentityProvider, string? FirstName);
 
         /// <summary>Calls GET /api/whoami with the supplied key. Returns the
         /// identity on success, throws HttpRequestException on failure with
-        /// a message safe to show in the UI.</summary>
+        /// a message safe to show in the UI. Caches the returned first name so
+        /// the Home welcome header can greet the user by name.</summary>
         public static async Task<WhoAmIResult> TestConnectionAsync(
             string endpointUrl, string apiKey, CancellationToken ct = default)
         {
@@ -213,7 +217,37 @@ namespace MyCraftyStash.Services
             var body = await resp.Content.ReadFromJsonAsync<WhoAmIResult>(_jsonOpts, ct);
             if (body is null || string.IsNullOrEmpty(body.UserId))
                 throw new HttpRequestException("Server response was empty or malformed.");
+
+            // Persist the first name (may be null until the user has visited the
+            // website signed in once; harmless to store null).
+            if (!string.IsNullOrWhiteSpace(body.FirstName))
+                UserSettingsService.SetSettingValue(KeyFirstName, body.FirstName);
+
             return body;
+        }
+
+        /// <summary>The cloud account's first name, cached from the last
+        /// successful Test connection / Sync. Null when not configured or the
+        /// website hasn't been visited signed in yet.</summary>
+        public static string? GetCachedFirstName() =>
+            UserSettingsService.GetSettingValue(KeyFirstName);
+
+        /// <summary>Refreshes the cached first name in the background using the
+        /// stored endpoint + key. Silent: any failure leaves the cache as-is.
+        /// Called on Home load so the greeting stays current without blocking.</summary>
+        public static async Task TryRefreshFirstNameAsync(CancellationToken ct = default)
+        {
+            var endpoint = UserSettingsService.GetSettingValue(KeyEndpoint);
+            var apiKey = LoadApiKey();
+            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey)) return;
+            try
+            {
+                await TestConnectionAsync(endpoint, apiKey, ct);
+            }
+            catch
+            {
+                // Offline or key not yet valid: keep whatever we had.
+            }
         }
 
         // ── Sync ────────────────────────────────────────────────────────────
