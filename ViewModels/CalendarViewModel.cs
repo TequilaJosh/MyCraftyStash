@@ -132,7 +132,13 @@ namespace MyCraftyStash.ViewModels
                 var dailyRange = _teCalendarOcr.GetCachedForRange(
                     firstOfMonth.AddDays(-7),    // include some prev-month carry-over rows
                     lastOfMonth.AddDays(7));
-                _teDailyLookup = dailyRange.ToDictionary(d => d.Date, d => d);
+                // GroupBy+Last, not ToDictionary: overlapping OCR'd month
+                // images can produce two cache rows for the same Date, and a
+                // plain ToDictionary throws on the duplicate key, failing the
+                // whole calendar load. Last() keeps the most recently written.
+                _teDailyLookup = dailyRange
+                    .GroupBy(d => d.Date)
+                    .ToDictionary(g => g.Key, g => g.Last());
 
                 BuildCalendarGrid();
                 if (SelectedDay != null)

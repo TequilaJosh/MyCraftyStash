@@ -40,7 +40,22 @@ namespace MyCraftyStash.Services
         {
             // Grab up to 64 chars from the end - unique enough to detect changes
             var tail = imageUrl.Length > 64 ? imageUrl[^64..] : imageUrl;
-            return Math.Abs(tail.GetHashCode()).ToString("X8");
+            // String.GetHashCode() is randomized per process in .NET Core+, so
+            // it would produce a different filename every launch and the disk
+            // cache would never hit across restarts. Use a stable FNV-1a hash.
+            return StableHash(tail).ToString("X8");
+        }
+
+        // FNV-1a 32-bit: deterministic across processes, unlike GetHashCode().
+        private static uint StableHash(string s)
+        {
+            uint hash = 2166136261;
+            foreach (char c in s)
+            {
+                hash ^= c;
+                hash *= 16777619;
+            }
+            return hash;
         }
 
         private static BitmapImage? TryLoadFromDisk(int itemId, string imageUrl)

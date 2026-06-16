@@ -1518,6 +1518,13 @@ namespace MyCraftyStash.Services
                         item.Price = remaining.PricePerItem;
                         item.DatePurchased = remaining.DatePurchased;
                     }
+                    else
+                    {
+                        // Deleted the last purchase: clear the price/date so the
+                        // item doesn't keep showing the removed purchase's values.
+                        item.Price = null;
+                        item.DatePurchased = null;
+                    }
 
                     await context.SaveChangesAsync();
                 }
@@ -2008,39 +2015,12 @@ namespace MyCraftyStash.Services
             }
         }
 
-        private static bool _inspirationItemsTableEnsured = false;
-        private static readonly SemaphoreSlim _tableEnsureLock = new(1, 1);
-
-        private async Task EnsureInspirationImageItemsOnceAsync()
-        {
-            if (_inspirationItemsTableEnsured) return;
-            await _tableEnsureLock.WaitAsync();
-            try
-            {
-                if (_inspirationItemsTableEnsured) return;
-                using var context = CreateContext();
-                await context.Database.ExecuteSqlRawAsync(@"
-                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'inspiration_image_items')
-                    BEGIN
-                        CREATE TABLE inspiration_image_items (
-                            id INT IDENTITY(1,1) PRIMARY KEY,
-                            inspiration_image_id INT NOT NULL,
-                            item_id INT NOT NULL,
-                            FOREIGN KEY (inspiration_image_id) REFERENCES inspiration_images(id) ON DELETE CASCADE,
-                            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-                        )
-                    END");
-                _inspirationItemsTableEnsured = true;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogDatabaseError(ex, "EnsureInspirationImageItemsOnceAsync");
-            }
-            finally
-            {
-                _tableEnsureLock.Release();
-            }
-        }
+        // The inspiration_image_items table is created and owned by EF Core
+        // (mapped in InventoryDbContext.OnModelCreating). The old body here ran
+        // SQL Server T-SQL (INFORMATION_SCHEMA / IDENTITY) against this SQLite
+        // database, which threw a syntax error on every call and logged a
+        // spurious DB error each session. Kept as a no-op so callers compile.
+        private Task EnsureInspirationImageItemsOnceAsync() => Task.CompletedTask;
 
         public async Task<List<InspirationImageItem>> GetInspirationImageItemsAsync(int inspirationImageId)
         {

@@ -36,7 +36,9 @@ namespace MyCraftyStash.Services
                     .AsQueryable();
 
                 if (from.HasValue) q = q.Where(p => p.DatePurchased >= from.Value);
-                if (to.HasValue)   q = q.Where(p => p.DatePurchased <= to.Value.AddDays(1));
+                // Strict < next day so a purchase dated the day AFTER `to`
+                // (stored at midnight) isn't pulled into the range.
+                if (to.HasValue)   q = q.Where(p => p.DatePurchased < to.Value.Date.AddDays(1));
 
                 var rows = await q
                     .OrderByDescending(p => p.DatePurchased)

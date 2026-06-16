@@ -398,13 +398,23 @@ namespace MyCraftyStash.Services
                                 () => UploadImageAsync(endpoint!, apiKey, item.Id, "primary", bytes, ct),
                                 $"image item {item.Id}", ct);
                             result.ImagesUploaded++;
+                            // Row + image both confirmed: commit the hash so
+                            // this item is skipped next run.
+                            hashes[item.Id] = hash;
+                            PersistHashes(hashes);
                         }
-
-                        // Item row + image both confirmed (or the image was
-                        // undecodable and will never succeed): commit the hash
-                        // so this item is skipped next run.
-                        hashes[item.Id] = hash;
-                        PersistHashes(hashes);
+                        else
+                        {
+                            // ReEncode failed. Do NOT commit the hash, so the
+                            // image is retried next sync rather than the item
+                            // being permanently left without its cloud photo.
+                            // (A genuinely corrupt data URI will just retry and
+                            // fail again, which is cheap and self-corrects if
+                            // the user later re-saves a good image.)
+                            LoggingService.LogWarning(
+                                $"CloudSyncService: skipped image for item {item.Id} (re-encode failed); will retry next sync");
+                            result.Errors.Add($"Image item {item.Id}: could not read image data");
+                        }
                     }
                     catch (Exception ex)
                     {

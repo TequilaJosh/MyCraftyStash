@@ -33,9 +33,16 @@ namespace MyCraftyStash.ViewModels
                 if (!Rows.Any()) return Enumerable.Empty<GroupedPurchases>();
                 return SelectedGroupBy switch
                 {
-                    "Month"  => Rows.GroupBy(r => r.Date.HasValue ? r.Date.Value.ToString("MMMM yyyy") : "Unknown")
+                    // Order by the actual month, not the formatted label.
+                    // "MMMM yyyy" sorted as text put March after June and mixed
+                    // years; key on a real date and format only for display.
+                    "Month"  => Rows.GroupBy(r => r.Date.HasValue
+                                        ? new DateTime(r.Date.Value.Year, r.Date.Value.Month, 1)
+                                        : DateTime.MinValue)
                                     .OrderByDescending(g => g.Key)
-                                    .Select(g => new GroupedPurchases(g.Key, g.ToList())),
+                                    .Select(g => new GroupedPurchases(
+                                        g.Key == DateTime.MinValue ? "Unknown" : g.Key.ToString("MMMM yyyy"),
+                                        g.ToList())),
                     "Type"   => Rows.GroupBy(r => string.IsNullOrEmpty(r.ItemType) ? "Unknown" : r.ItemType)
                                     .OrderBy(g => g.Key)
                                     .Select(g => new GroupedPurchases(g.Key, g.ToList())),
