@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -106,9 +107,26 @@ namespace MyCraftyStash.Services
             return h;
         }
 
+        // Last-ditch name when no og:title / <title> could be read: turn the
+        // final URL path segment into a readable title (e.g.
+        // ".../big-thanks-stamp-set" -> "Big Thanks Stamp Set"), falling back
+        // to the host only when there's no usable path.
         private static string UrlBasename(string url)
         {
-            try { return new Uri(url).Host; } catch { return url; }
+            try
+            {
+                var uri = new Uri(url);
+                var slug = uri.Segments
+                    .Select(s => s.Trim('/'))
+                    .LastOrDefault(s => s.Length > 0 && !s.Contains('.'));
+                if (!string.IsNullOrWhiteSpace(slug))
+                {
+                    var words = slug.Replace('-', ' ').Replace('_', ' ').Trim();
+                    return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(words);
+                }
+                return uri.Host;
+            }
+            catch { return url; }
         }
     }
 }

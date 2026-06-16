@@ -1488,6 +1488,14 @@ namespace MyCraftyStash.ViewModels
                         cachedItem.ItemNumber = SelectedItem.ItemNumber;
                         cachedItem.IsDiscontinued = SelectedItem.IsDiscontinued;
                         cachedItem.StencilLayers = SelectedItem.StencilLayers;
+                        // Keep the rest of the editable fields in sync too, or a
+                        // later cache-served reload would show stale values.
+                        cachedItem.Subtype = SelectedItem.Subtype;
+                        cachedItem.PackSize = SelectedItem.PackSize;
+                        cachedItem.CurrentStock = SelectedItem.CurrentStock;
+                        cachedItem.PurchasedFrom = SelectedItem.PurchasedFrom;
+                        cachedItem.Notes = SelectedItem.Notes;
+                        cachedItem.SiteUrl = SelectedItem.SiteUrl;
                     }
                 }
                 var listItem = Items.FirstOrDefault(i => i.Id == updatedItemId);

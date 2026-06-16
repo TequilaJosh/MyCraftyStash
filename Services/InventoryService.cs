@@ -805,16 +805,19 @@ namespace MyCraftyStash.Services
                 var existing = await context.Projects.FindAsync(project.Id);
                 if (existing == null) return;
 
+                // One transaction so the clear-then-readd of project items is
+                // atomic: a crash between the two used to leave the project with
+                // zero linked items.
+                using var tx = await context.Database.BeginTransactionAsync();
+
                 existing.Name = project.Name;
                 existing.Description = project.Description;
                 existing.ImageUrl = project.ImageUrl;
                 existing.Technique = project.Technique;
                 existing.Notes = project.Notes;
-                await context.SaveChangesAsync();
 
                 var existingLinks = context.ProjectItems.Where(pi => pi.ProjectId == project.Id);
                 context.ProjectItems.RemoveRange(existingLinks);
-                await context.SaveChangesAsync();
 
                 for (int i = 0; i < itemUsages.Count; i++)
                 {
@@ -828,6 +831,7 @@ namespace MyCraftyStash.Services
                     });
                 }
                 await context.SaveChangesAsync();
+                await tx.CommitAsync();
             }
             catch (Exception ex)
             {

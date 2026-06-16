@@ -190,8 +190,10 @@
                                         MouseLeftButtonUp="ItemCard_Click">
                                     <StackPanel>
                                         <Grid Height="{DynamicResource CardImageHeight}" Margin="0,0,0,12">
-                                            <Border CornerRadius="8" Background="{DynamicResource SidebarBrush}" ClipToBounds="True">
-                                                <Image Stretch="Uniform" 
+                                            <!-- White photo backdrop: product images are shot on white, so a
+                                                 white box hides the pillarbox bars left by Uniform stretch. -->
+                                            <Border CornerRadius="8" Background="White" ClipToBounds="True">
+                                                <Image Stretch="Uniform"
                                                        HorizontalAlignment="Center" 
                                                        VerticalAlignment="Center">
                                                     <Image.Source>
