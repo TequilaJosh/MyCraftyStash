@@ -10,6 +10,26 @@
 #
 # New sections go ABOVE older ones.
 
+## 1.1.0.1
+- The Home page greets you by name once Cloud Sync is set up, using the
+  first name from the Google account you sign in with on the website.
+  Before that it says "Welcome to My Crafty Stash" the first time you open
+  the app and "Welcome back" after.
+- Item photos now sit on a clean white background on the cards, so the
+  side bars you used to see behind product photos are gone.
+- Faster image loading: the thumbnail cache now carries over between app
+  launches instead of rebuilding every time you open the app.
+- Purchase Report's "Month" view lists months in real date order again
+  (it was sorting them alphabetically).
+- Deleting the last purchase on an item now clears its price and date
+  instead of leaving the old values behind.
+- The calendar no longer fails to load when Taylored Expressions calendar
+  data overlaps between months.
+- Editing a project saves its supply list all-or-nothing, so an
+  interrupted save can't leave a project with no items.
+- "Add item from link" on the wishlist makes a nicer name from the web
+  address when the page doesn't provide a title.
+
 ## 1.0.2.14
 - The Home page now greets you by name once Cloud Sync is set up. It uses
   the first name from the Google account you sign in with on the website.
