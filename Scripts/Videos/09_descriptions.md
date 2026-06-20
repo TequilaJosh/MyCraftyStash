@@ -21,7 +21,7 @@ Polished, copy-paste-ready descriptions for each video. Drop these straight into
 
 ## The series (website order)
 
-01 Home Dashboard · 02 Inventory · 03 Adding an Item · 04 Settings · 05 Color Match · 06 Projects · 07 Envelope & Box · 08 Sentiment Search · 09 Inspiration · 10 Wish List · 11 Social
+01 Home Dashboard · 02 Inventory · 03 Adding an Item · 04 Settings · 05 Color Match · 06 Projects · 07 Envelope & Box · 08 Sentiment Search · 09 Inspiration · 10 Wish List · 11 Social · 12 Cloud Sync
 
 (Card Build Wizard is preserved as a bonus description at the bottom in case you record it later.)
 
@@ -491,6 +491,52 @@ Bug or feature request: Silosoftwarecreations@gmail.com
 Support on Ko-fi: https://ko-fi.com/mycraftystash
 
 #mycraftystash #cardmaking #craftreleases
+```
+
+---
+
+## 12: Cloud Sync
+
+```
+Take your whole stash with you. Cloud Sync pushes your inventory to the web so you can browse it from your phone, in the craft store, at a crop, anywhere you might wonder "do I already own this?"
+
+📥 Download My Crafty Stash (free): https://mycraftystash.com
+▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+
+What you'll learn
+Set it up once:
+✦ Sign in on the website with Google and mint a sync key
+✦ Paste the key into Settings, Cloud Sync, and hit Test connection
+✦ Sync now pushes your items and photos to the cloud, with a progress bar
+
+View it anywhere:
+✦ Open the website on your phone and there's your whole stash, searchable
+✦ Read-only on the web, your desktop stays the source of truth
+✦ Re-syncs only upload what changed, so it's quick after the first time
+
+Your data, your call:
+✦ Cloud Sync is optional, the app works fully offline without it
+✦ Revoke a key anytime from the website
+
+Suggested chapters (edit to match your cut)
+00:00 The "am I about to buy a duplicate?" moment in the store
+00:20 Minting a sync key on the website
+00:45 Pasting the key and testing the connection
+01:10 Your first Sync now
+01:45 Browsing your stash on a phone
+02:20 What re-syncing does
+02:40 Optional and revocable, your data your call
+
+What is My Crafty Stash?
+A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized, and now in your pocket.
+
+▶ Full playlist: [PLAYLIST LINK]
+
+Get in touch
+Bug or feature request: Silosoftwarecreations@gmail.com
+Support on Ko-fi: https://ko-fi.com/mycraftystash
+
+#mycraftystash #craftorganization #cardmaking
 ```
 
 ---
