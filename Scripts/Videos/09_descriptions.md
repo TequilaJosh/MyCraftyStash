@@ -14,7 +14,7 @@ Polished, copy-paste-ready descriptions for each video. Drop these straight into
 | What | URL |
 |---|---|
 | Website / download | https://mycraftystash.com |
-| Home tutorial (Video 01) | https://youtu.be/aYvw46oe9qU |
+| Home tutorial (Video 01) | https://youtu.be/jALRbudc5BQ |
 | Support on Ko-fi | https://ko-fi.com/mycraftystash |
 | Bug reports / contact | Silosoftwarecreations@gmail.com |
 | Playlist | `[PLAYLIST LINK]`: create on YouTube once you have 2+ videos up |
@@ -79,7 +79,7 @@ If My Crafty Stash saves you time, a Ko-fi tip keeps the lights on: https://ko-f
 You bought the right stamp set last spring. You just can't find it. My Crafty Stash makes every supply in your craft room searchable in seconds, by name, theme, type, or even the sentiments printed on the stamps themselves.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Searching across your whole stash:
@@ -124,7 +124,7 @@ Support the app on Ko-fi: https://ko-fi.com/mycraftystash
 Got a new stamp set in the mail? Here's how to log it in My Crafty Stash in under a minute, photo and all, so it's searchable the second it lands in your craft room.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 The Add Item form:
@@ -166,7 +166,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Make My Crafty Stash yours. Settings is where you set your types, themes, locations, card sizes, low-stock warning levels, and turn on Cloud Sync to view your stash from your phone.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Make it look the way you like:
@@ -212,7 +212,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 You see a card you love and want those exact colors. But which DMC floss? Which OLO or Copic marker? Do you already own the right cardstock? Color Match takes the guesswork out of palette building.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 One color, every medium:
@@ -251,7 +251,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 You finished a beautiful card. You took a photo. That's where the record usually ends, until now. Projects in My Crafty Stash turn every finished card into a full build record: photo, supplies used, and every time you've remade it since.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 The Projects grid:
@@ -298,7 +298,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Made a card and need the envelope to fit it? The Envelope & Box calculator gives you exact cutting and scoring measurements for any card size, no more guessing or wasting cardstock.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Envelopes that actually fit:
@@ -338,7 +338,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Need a "thinking of you" but can't remember which set has it? Sentiment Search finds any saying across every stamp set you own, so the perfect words are always one search away.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Make your sayings searchable:
@@ -378,7 +378,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Save the cards and color combos that inspire you. Inspiration boards keep your ideas tagged by color, theme, and type, so when you sit down to make a card you can find a look in seconds.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Boards for your ideas:
@@ -418,7 +418,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Your wish list shouldn't live in six browser tabs. The Wish List in My Crafty Stash gives every release, every shop, every someday-pile its own home, with running totals so you know what your wishes actually cost.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Multiple lists, color-coded tabs:
@@ -463,7 +463,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Never miss a release again. The Social view keeps the release calendars and events from your favorite craft brands in one place, so you always know what's coming and when.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Stay on top of releases:
@@ -501,7 +501,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 Take your whole stash with you. Cloud Sync pushes your inventory to the web so you can browse it from your phone, in the craft store, at a crop, anywhere you might wonder "do I already own this?"
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 Set it up once:
@@ -574,7 +574,7 @@ Record this one later if you want a deep-dive on the build recipe feature shown 
 What cardstock did you use? Which sentiment? Which die? The Card Build Wizard walks you through every part of a card, section by section, and saves a complete recipe you can recreate any time.
 
 📥 Download My Crafty Stash (free): https://mycraftystash.com
-▶ Start the series with the Home Dashboard tour: https://youtu.be/aYvw46oe9qU
+▶ Start the series with the Home Dashboard tour: https://youtu.be/jALRbudc5BQ
 
 What you'll learn
 ✦ The hub layout, fill in only the sections your card actually has
@@ -603,4 +603,4 @@ Before publishing each video, find-and-replace:
 - `[PLAYLIST LINK]` → the YouTube playlist URL (create one as soon as you have 2+ videos)
 - Chapter timestamps → adjust to match your actual edit (YouTube needs `00:00 Title` format, first chapter exactly at 00:00, at least 3 chapters, each 10s or more apart)
 
-The Home video is already up at https://youtu.be/aYvw46oe9qU. As you upload each new one, add it to the playlist and the website's How-to page (paste the YouTube id into the matching card in components/pages.jsx).
+The Home video is already up at https://youtu.be/jALRbudc5BQ. As you upload each new one, add it to the playlist and the website's How-to page (paste the YouTube id into the matching card in components/pages.jsx).
