@@ -17,7 +17,7 @@ Polished, copy-paste-ready descriptions for each video. Drop these straight into
 | Home tutorial (Video 01) | https://youtu.be/jALRbudc5BQ |
 | Support on Ko-fi | https://ko-fi.com/mycraftystash |
 | Bug reports / contact | Silosoftwarecreations@gmail.com |
-| Playlist | `[PLAYLIST LINK]`: create on YouTube once you have 2+ videos up |
+| Playlist | `https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U`: create on YouTube once you have 2+ videos up |
 
 ## The series (website order)
 
@@ -62,7 +62,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 My Crafty Stash is a free Windows desktop app for paper crafters who want their stamps, dies, stencils, cardstock, and projects organized in one place. Built by a crafter, for crafters.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Found a bug or have a feature request? Email Silosoftwarecreations@gmail.com, every email gets read.
@@ -107,7 +107,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters, built so you spend more time making cards and less time hunting for the supplies to make them with.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -149,7 +149,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply you own, every project you make, every wish list, in one place.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -195,7 +195,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -234,7 +234,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters, your craft room, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -281,7 +281,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply you own, every project you make, every wish list, in one place.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -321,7 +321,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -361,7 +361,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -401,7 +401,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -446,7 +446,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -484,7 +484,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -530,7 +530,7 @@ Suggested chapters (edit to match your cut)
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized, and now in your pocket.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -557,7 +557,7 @@ Meet My Crafty Stash, a free Windows desktop app for paper crafters that keeps e
 
 📥 Download free: https://mycraftystash.com
 ☕ Support on Ko-fi: https://ko-fi.com/mycraftystash
-▶ Full tutorials: [PLAYLIST LINK]
+▶ Full tutorials: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Built by a crafter, for crafters. Bug reports & feature requests welcome at Silosoftwarecreations@gmail.com.
 
@@ -585,7 +585,7 @@ What you'll learn
 What is My Crafty Stash?
 A free Windows desktop app for paper crafters. Every supply, every project, every wish list, organized.
 
-▶ Full playlist: [PLAYLIST LINK]
+▶ Full playlist: https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U
 
 Get in touch
 Bug or feature request: Silosoftwarecreations@gmail.com
@@ -600,7 +600,7 @@ Support on Ko-fi: https://ko-fi.com/mycraftystash
 
 Before publishing each video, find-and-replace:
 
-- `[PLAYLIST LINK]` → the YouTube playlist URL (create one as soon as you have 2+ videos)
+- `https://www.youtube.com/playlist?list=PLqAYKTE3gukjZ3aqp9WWjBld45Aisb80U` → the YouTube playlist URL (create one as soon as you have 2+ videos)
 - Chapter timestamps → adjust to match your actual edit (YouTube needs `00:00 Title` format, first chapter exactly at 00:00, at least 3 chapters, each 10s or more apart)
 
 The Home video is already up at https://youtu.be/jALRbudc5BQ. As you upload each new one, add it to the playlist and the website's How-to page (paste the YouTube id into the matching card in components/pages.jsx).
