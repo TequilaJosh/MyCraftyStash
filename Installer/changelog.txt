@@ -29,6 +29,17 @@
   interrupted save can't leave a project with no items.
 - "Add item from link" on the wishlist makes a nicer name from the web
   address when the page doesn't provide a title.
+- Card Builder: picking a stamp that's tagged as a stencil combo now walks
+  you through each stencil layer to record the ink used, the same way
+  picking a stencil from the Stencils dropdown does.
+- Card Builder: the ink color pickers now show only the colors you actually
+  own an ink in (still in your color order), instead of every color. Use
+  the Custom Color button for anything you don't own.
+- Card Builder: switching between Background, Additional, and Focal mat now
+  clears the item search box, so a leftover search can't hide items in the
+  next mat.
+- Inventory cards: the stock count badge (for example "8 left") no longer
+  overlaps or clips long item names.
 
 ## 1.0.2.14
 - The Home page now greets you by name once Cloud Sync is set up. It uses
