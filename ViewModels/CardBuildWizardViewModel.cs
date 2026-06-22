@@ -4583,6 +4583,13 @@ namespace MyCraftyStash.ViewModels
                     _inkItemIdByColor.TryAdd(color, match.Id);
             }
 
+            // Restrict the ink-color pickers to colors the user actually owns an
+            // ink in (Mini Cube or full pad), kept in Color Order sequence. Colors
+            // they don't own can still be added via the "Custom Color" button.
+            _inkColorOptions = _inkColorOptions
+                .Where(c => _inkItemIdByColor.ContainsKey(c))
+                .ToList();
+
             // Load foil and glitter cardstock item names for the per-section checkboxes
             var foilCardstockItems = await labels.GetItemsForLabelAsync("Foil Cardstock", _service);
             _foilCardstockNames = foilCardstockItems.Select(i => i.Name).ToList();
