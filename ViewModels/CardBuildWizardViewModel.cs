@@ -1541,7 +1541,10 @@ namespace MyCraftyStash.ViewModels
         // main stamp color (existing stamp-ink follow-up) and then walks each
         // stencil layer's ink, exactly like picking a stencil from the Stencils
         // dropdown. The layer count comes from the stamp's StencilLayers field.
-        public bool StampHasStencilCombo      => SubtypeContains(StampsPicker.SelectedItem, "Stencil Combo");
+        // Matches both the correct "Stencil Combo" and the "Sencil Combo" typo
+        // that exists across the real inventory data, so neither spelling is missed.
+        public bool StampHasStencilCombo      => SubtypeContains(StampsPicker.SelectedItem, "Stencil Combo")
+                                              || SubtypeContains(StampsPicker.SelectedItem, "Sencil Combo");
         // Drives the per-layer stencil stepper, which now serves both a picked
         // stencil and a stencil-combo stamp.
         public bool ShowDetailStencilLayers   => ShowStencilFollowups || StampHasStencilCombo;
