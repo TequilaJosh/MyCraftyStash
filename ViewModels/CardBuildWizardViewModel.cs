@@ -1506,7 +1506,11 @@ namespace MyCraftyStash.ViewModels
         // per-layer.
         private void RebuildDetailStencilLayerEntries()
         {
-            int layerCount = Math.Max(1, StencilsPicker.SelectedItem?.StencilLayers ?? 1);
+            // The layer source is the picked stencil, or a stencil-combo stamp
+            // when no stencil is chosen. Layer count comes from its StencilLayers.
+            var layerSource = StencilsPicker.SelectedItem
+                ?? (StampHasStencilCombo ? StampsPicker.SelectedItem : null);
+            int layerCount = Math.Max(1, layerSource?.StencilLayers ?? 1);
             DetailStencilLayerEntries.Clear();
             int InkItemIdFor(string color) =>
                 _inkItemIdByColor.TryGetValue(color, out var id) ? id : 0;
@@ -1533,6 +1537,16 @@ namespace MyCraftyStash.ViewModels
         // ── Visibility flags for the Selection Details panel ──────────────────
         public bool ShowStampFollowups        => StampsPicker.SelectedItem != null;
         public bool StampHasDieCombo          => SubtypeContains(StampsPicker.SelectedItem, "Die Combo");
+        // A stamp whose subtype marks it as a stencil combo: the user picks the
+        // main stamp color (existing stamp-ink follow-up) and then walks each
+        // stencil layer's ink, exactly like picking a stencil from the Stencils
+        // dropdown. The layer count comes from the stamp's StencilLayers field.
+        public bool StampHasStencilCombo      => SubtypeContains(StampsPicker.SelectedItem, "Stencil Combo");
+        // Drives the per-layer stencil stepper, which now serves both a picked
+        // stencil and a stencil-combo stamp.
+        public bool ShowDetailStencilLayers   => ShowStencilFollowups || StampHasStencilCombo;
+        // Stencil layers should be saved for a picked stencil OR a combo stamp.
+        public bool HasDetailStencilLayers    => StencilsPicker.SelectedItem != null || StampHasStencilCombo;
         public bool ShowDieFollowups          => DiesPicker.SelectedItem != null;
         public bool ShowEmbellEmbossingFollowups => SubtypeContains(EmbellishmentsPicker.SelectedItem, "Embossing Powder");
         public bool ShowStackletFollowups     => StackletsPicker.SelectedItem != null;
@@ -1594,7 +1608,18 @@ namespace MyCraftyStash.ViewModels
                 {
                     OnPropertyChanged(nameof(ShowStampFollowups));
                     OnPropertyChanged(nameof(StampHasDieCombo));
+                    OnPropertyChanged(nameof(StampHasStencilCombo));
+                    OnPropertyChanged(nameof(ShowDetailStencilLayers));
                     OnPropertyChanged(nameof(ShowAnyFollowups));
+                    // A stencil-combo stamp drives the same layer stepper as the
+                    // Stencils dropdown. Build it from the stamp's layer count, or
+                    // clear it when deselecting (unless a stencil is still picked).
+                    if (StampHasStencilCombo) RebuildDetailStencilLayerEntries();
+                    else if (StencilsPicker.SelectedItem == null)
+                    {
+                        DetailStencilLayerEntries.Clear();
+                        DetailStencilLayerIndex = 0;
+                    }
                     OnAnyPickerSelectionChanged();
                 }
             };
@@ -1646,8 +1671,10 @@ namespace MyCraftyStash.ViewModels
                 if (e.PropertyName == nameof(WizardItemPicker.SelectedItem))
                 {
                     OnPropertyChanged(nameof(ShowStencilFollowups));
+                    OnPropertyChanged(nameof(ShowDetailStencilLayers));
                     OnPropertyChanged(nameof(ShowAnyFollowups));
                     if (StencilsPicker.SelectedItem != null) RebuildDetailStencilLayerEntries();
+                    else if (StampHasStencilCombo) RebuildDetailStencilLayerEntries();
                     else { DetailStencilLayerEntries.Clear(); DetailStencilLayerIndex = 0; }
                     OnAnyPickerSelectionChanged();
                 }
@@ -2001,7 +2028,7 @@ namespace MyCraftyStash.ViewModels
                 StackletLayers           = StackletLayers,
                 EmbossingFolder          = EmbossingFoldersPicker.SelectedItem,
                 Stencil                  = StencilsPicker.SelectedItem,
-                StencilLayerEntries      = StencilsPicker.SelectedItem != null
+                StencilLayerEntries      = HasDetailStencilLayers
                     ? DetailStencilLayerEntries.Select(le => new WizardStencilLayer
                         {
                             LayerNumber      = le.LayerNumber,
@@ -2016,7 +2043,7 @@ namespace MyCraftyStash.ViewModels
                     : new List<WizardStencilLayer>(),
                 // Flat aggregate of every layer's inks (preserves backward compat
                 // with callers that read StencilInkColors directly).
-                StencilInkColors         = StencilsPicker.SelectedItem != null
+                StencilInkColors         = HasDetailStencilLayers
                     ? DetailStencilLayerEntries.SelectMany(le => le.Inks.Ordered).Distinct().ToList()
                     : new List<string>(),
                 // Aggregate the legacy "global" Used* flags + Glitter/HM/AP item
@@ -2024,32 +2051,32 @@ namespace MyCraftyStash.ViewModels
                 // code (which iterates StencilGlitterItems etc.) keeps surfacing
                 // every per-layer pick. Layer numbers that flagged the medium are
                 // joined into the comma-separated Layers string for display.
-                StencilUsedGlitter       = StencilsPicker.SelectedItem != null
+                StencilUsedGlitter       = HasDetailStencilLayers
                     && DetailStencilLayerEntries.Any(le => le.UsedGlitter),
-                StencilGlitterLayers     = StencilsPicker.SelectedItem != null
+                StencilGlitterLayers     = HasDetailStencilLayers
                     ? string.Join(",", DetailStencilLayerEntries.Where(le => le.UsedGlitter).Select(le => le.LayerNumber))
                     : string.Empty,
-                StencilUsedHappyMedium   = StencilsPicker.SelectedItem != null
+                StencilUsedHappyMedium   = HasDetailStencilLayers
                     && DetailStencilLayerEntries.Any(le => le.UsedHappyMedium),
-                StencilHappyMediumLayers = StencilsPicker.SelectedItem != null
+                StencilHappyMediumLayers = HasDetailStencilLayers
                     ? string.Join(",", DetailStencilLayerEntries.Where(le => le.UsedHappyMedium).Select(le => le.LayerNumber))
                     : string.Empty,
-                StencilUsedAstroPaste    = StencilsPicker.SelectedItem != null
+                StencilUsedAstroPaste    = HasDetailStencilLayers
                     && DetailStencilLayerEntries.Any(le => le.UsedAstroPaste),
-                StencilAstroPasteLayers  = StencilsPicker.SelectedItem != null
+                StencilAstroPasteLayers  = HasDetailStencilLayers
                     ? string.Join(",", DetailStencilLayerEntries.Where(le => le.UsedAstroPaste).Select(le => le.LayerNumber))
                     : string.Empty,
-                StencilGlitterItems      = StencilsPicker.SelectedItem != null
+                StencilGlitterItems      = HasDetailStencilLayers
                     ? DetailStencilLayerEntries.Where(le => le.UsedGlitter)
                                                .SelectMany(le => le.GlitterPicker.SelectedItems)
                                                .GroupBy(i => i.Id).Select(g => g.First()).ToList()
                     : new List<WizardItemOption>(),
-                StencilHappyMediumItems  = StencilsPicker.SelectedItem != null
+                StencilHappyMediumItems  = HasDetailStencilLayers
                     ? DetailStencilLayerEntries.Where(le => le.UsedHappyMedium)
                                                .SelectMany(le => le.HappyMediumPicker.SelectedItems)
                                                .GroupBy(i => i.Id).Select(g => g.First()).ToList()
                     : new List<WizardItemOption>(),
-                StencilAstroPasteItems   = StencilsPicker.SelectedItem != null
+                StencilAstroPasteItems   = HasDetailStencilLayers
                     ? DetailStencilLayerEntries.Where(le => le.UsedAstroPaste)
                                                .SelectMany(le => le.AstroPastePicker.SelectedItems)
                                                .GroupBy(i => i.Id).Select(g => g.First()).ToList()
@@ -2320,6 +2347,30 @@ namespace MyCraftyStash.ViewModels
             OnPropertyChanged(nameof(MatPieceActionLabel));
             OnPropertyChanged(nameof(MatPieceWordCapitalized));
             OnPropertyChanged(nameof(IsAnyMatHubActive));
+            // Switching between Background / Additional / Focal mat must not carry
+            // a leftover search filter from the previous mat into the next one's
+            // pickers, which would hide items and confuse the user.
+            ResetAllPickerSearches();
+        }
+
+        /// <summary>Clears the search box on every item picker the VM owns. Called
+        /// when switching mat targets so a stale search from one mat section can't
+        /// hide items in the next. Reflection keeps this correct as pickers are
+        /// added without having to maintain a hand-written list.</summary>
+        private void ResetAllPickerSearches()
+        {
+            foreach (var prop in GetType().GetProperties())
+            {
+                if (prop.PropertyType == typeof(WizardItemPicker)
+                    && prop.GetValue(this) is WizardItemPicker picker
+                    && !string.IsNullOrEmpty(picker.SearchText))
+                {
+                    picker.SearchText = string.Empty;
+                }
+            }
+            // The Details ink list has its own inline search box, reset it too.
+            if (!string.IsNullOrEmpty(DetailsInkSearchText))
+                DetailsInkSearchText = string.Empty;
         }
 
         // True when ANY of the three mat types is the current section. The shared
