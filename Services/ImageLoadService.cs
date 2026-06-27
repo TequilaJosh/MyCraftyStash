@@ -83,6 +83,12 @@ namespace MyCraftyStash.Services
             // Strip EXIF/ICC metadata - not needed for stored thumbnails
             image.Strip();
 
+            // JPEG has no alpha channel; flatten any transparency onto white first
+            // so transparent PNGs (e.g. stencils) don't come out with black where
+            // the transparency was.
+            image.BackgroundColor = MagickColors.White;
+            image.Alpha(AlphaOption.Remove);
+
             image.Format  = MagickFormat.Jpeg;
             image.Quality = JpegQuality;
 

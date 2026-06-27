@@ -605,6 +605,10 @@ namespace MyCraftyStash.Services
                 // Greater=true means "only shrink, never enlarge." Preserves
                 // aspect via the bounding box.
                 img.Resize(new MagickGeometry(MaxImageEdgePx, MaxImageEdgePx) { Greater = true });
+                // JPEG has no alpha channel; flatten transparency onto white so
+                // transparent PNGs (e.g. stencils) don't black out on upload.
+                img.BackgroundColor = MagickColors.White;
+                img.Alpha(AlphaOption.Remove);
                 img.Format = MagickFormat.Jpeg;
                 img.Quality = JpegQuality;
                 return img.ToByteArray();
