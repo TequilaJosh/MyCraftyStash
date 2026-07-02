@@ -12,10 +12,10 @@
     <RootNamespace>MyCraftyStash</RootNamespace>
 
     <!-- Version settings - update these when releasing new versions -->
-    <Version>1.1.0.1</Version>
-    <AssemblyVersion>1.1.0.1</AssemblyVersion>
-    <FileVersion>1.1.0.1</FileVersion>
-    <InformationalVersion>1.1.0.1</InformationalVersion>
+    <Version>1.1.0.2</Version>
+    <AssemblyVersion>1.1.0.2</AssemblyVersion>
+    <FileVersion>1.1.0.2</FileVersion>
+    <InformationalVersion>1.1.0.2</InformationalVersion>
 
     <!-- Populated assembly metadata. Empty version-info blocks are a known
          heuristic input for AV "RiskWare.Crack" / ML-anomalous false
