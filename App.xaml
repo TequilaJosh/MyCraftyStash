@@ -64,6 +64,9 @@
             <DataTemplate DataType="{x:Type vm:PurchaseReportViewModel}">
                 <views:PurchaseReportView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SalesReportViewModel}">
+                <views:SalesReportView />
+            </DataTemplate>
             
             <!--
             ████████████████████████████████████████████████████████████████████████

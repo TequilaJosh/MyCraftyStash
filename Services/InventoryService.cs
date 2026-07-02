@@ -426,6 +426,8 @@ namespace MyCraftyStash.Services
                         .ToList();
                 }
 
+                await PopulateBoughtSoldAsync(context, sorted);
+
                 return sorted;
             }
             catch (Exception ex)
@@ -477,13 +479,53 @@ namespace MyCraftyStash.Services
             try
             {
                 using var context = CreateContext();
-                return await context.Items.AsNoTracking()
+                var item = await context.Items.AsNoTracking()
                     .FirstOrDefaultAsync(i => i.Id == id);
+                if (item != null)
+                    await PopulateBoughtSoldAsync(context, new[] { item });
+                return item;
             }
             catch (Exception ex)
             {
                 LoggingService.LogDatabaseError(ex, $"GetItemByIdAsync (id: {id})");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Fills in the transient <see cref="Item.TotalBought"/> / <see cref="Item.TotalSold"/>
+        /// counts (sum of purchase / sale quantities) for the supplied items, so
+        /// the UI can flag sold-out cards. Two grouped queries, keyed by item id.
+        /// </summary>
+        private static async Task PopulateBoughtSoldAsync(InventoryDbContext context, IReadOnlyCollection<Item> items)
+        {
+            if (items.Count == 0) return;
+            try
+            {
+                var ids = items.Select(i => i.Id).ToList();
+
+                var bought = await context.ItemPurchases
+                    .Where(p => ids.Contains(p.ItemId))
+                    .GroupBy(p => p.ItemId)
+                    .Select(g => new { ItemId = g.Key, Qty = g.Sum(p => p.Quantity) })
+                    .ToDictionaryAsync(x => x.ItemId, x => x.Qty);
+
+                var sold = await context.ItemSales
+                    .Where(s => ids.Contains(s.ItemId))
+                    .GroupBy(s => s.ItemId)
+                    .Select(g => new { ItemId = g.Key, Qty = g.Sum(s => s.Quantity) })
+                    .ToDictionaryAsync(x => x.ItemId, x => x.Qty);
+
+                foreach (var it in items)
+                {
+                    it.TotalBought = bought.TryGetValue(it.Id, out var b) ? b : 0;
+                    it.TotalSold = sold.TryGetValue(it.Id, out var s) ? s : 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Never let the bought/sold enrichment break item loading.
+                LoggingService.LogDatabaseError(ex, "PopulateBoughtSoldAsync (non-fatal — counts left at 0)");
             }
         }
 
@@ -509,7 +551,10 @@ namespace MyCraftyStash.Services
             try
             {
                 using var context = CreateContext();
-                return await context.Items.FindAsync(id);
+                var item = await context.Items.FindAsync(id);
+                if (item != null)
+                    await PopulateBoughtSoldAsync(context, new[] { item });
+                return item;
             }
             catch (Exception ex)
             {
@@ -1536,6 +1581,126 @@ namespace MyCraftyStash.Services
             catch (Exception ex)
             {
                 LoggingService.LogDatabaseError(ex, $"DeleteItemPurchaseAsync (purchaseId: {purchaseId})");
+                throw;
+            }
+        }
+
+        // ---- Sales (revenue side; mirrors the purchase methods above) ----
+
+        public async Task<List<ItemSale>> GetItemSalesAsync(int itemId)
+        {
+            try
+            {
+                using var context = CreateContext();
+                return await context.ItemSales
+                    .Where(s => s.ItemId == itemId)
+                    .OrderByDescending(s => s.DateSold)
+                    .ThenByDescending(s => s.Id)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"GetItemSalesAsync (itemId: {itemId})");
+                throw;
+            }
+        }
+
+        public async Task<(ItemSale Sale, int TotalQuantity, decimal TotalRevenue, Item? UpdatedItem)> AddItemSaleAsync(int itemId, int quantity, decimal salePrice, DateTime? dateSold = null)
+        {
+            try
+            {
+                using var context = CreateContext();
+                var sale = new ItemSale
+                {
+                    ItemId = itemId,
+                    Quantity = quantity,
+                    SalePrice = salePrice,
+                    DateSold = dateSold,
+                    CreatedAt = DateTime.Now
+                };
+                context.ItemSales.Add(sale);
+                await context.SaveChangesAsync();
+
+                var allSales = await context.ItemSales
+                    .Where(s => s.ItemId == itemId)
+                    .ToListAsync();
+
+                var totalQuantity = allSales.Sum(s => s.Quantity);
+                var totalRevenue = allSales.Sum(s => s.Quantity * s.SalePrice);
+
+                // For tracked item types, selling removes stock: quantity * packSize
+                // sheets/items. Mirror of the purchase path, which adds it. We don't
+                // touch Item.Price — that reflects purchase (cost), not sale price.
+                var item = await context.Items.FindAsync(itemId);
+                if (item != null &&
+                    IsTrackedType(item.Type) && item.PackSize.HasValue && item.PackSize.Value > 0)
+                {
+                    var stockToRemove = quantity * item.PackSize.Value;
+                    item.CurrentStock = Math.Max(0, (item.CurrentStock ?? 0) - stockToRemove);
+                    await context.SaveChangesAsync();
+                }
+
+                var updatedItem = await GetItemAsync(itemId);
+                return (sale, totalQuantity, totalRevenue, updatedItem);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"AddItemSaleAsync (itemId: {itemId})");
+                throw;
+            }
+        }
+
+        public async Task<(int TotalQuantity, decimal TotalRevenue)> GetItemSaleTotalsAsync(int itemId)
+        {
+            try
+            {
+                using var context = CreateContext();
+                var result = await context.ItemSales
+                    .Where(s => s.ItemId == itemId)
+                    .GroupBy(s => s.ItemId)
+                    .Select(g => new
+                    {
+                        TotalQuantity = g.Sum(s => s.Quantity),
+                        TotalRevenue = g.Sum(s => s.Quantity * s.SalePrice)
+                    })
+                    .FirstOrDefaultAsync();
+
+                return result != null ? (result.TotalQuantity, result.TotalRevenue) : (0, 0m);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"GetItemSaleTotalsAsync (itemId: {itemId})");
+                throw;
+            }
+        }
+
+        public async Task DeleteItemSaleAsync(int saleId)
+        {
+            try
+            {
+                using var context = CreateContext();
+                var sale = await context.ItemSales.FindAsync(saleId);
+                if (sale == null) return;
+
+                var itemId = sale.ItemId;
+                var restoredQuantity = sale.Quantity;
+
+                context.ItemSales.Remove(sale);
+                await context.SaveChangesAsync();
+
+                // Reversing a sale puts the stock back for tracked items.
+                var item = await context.Items.FindAsync(itemId);
+                if (item != null &&
+                    IsTrackedType(item.Type) && item.PackSize.HasValue && item.PackSize.Value > 0)
+                {
+                    var stockToRestore = restoredQuantity * item.PackSize.Value;
+                    item.CurrentStock = (item.CurrentStock ?? 0) + stockToRestore;
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogDatabaseError(ex, $"DeleteItemSaleAsync (saleId: {saleId})");
                 throw;
             }
         }

@@ -11,6 +11,7 @@ namespace MyCraftyStash.ViewModels
         private readonly InventoryService _service;
         private readonly WishlistService _wishlistService;
         private readonly PurchaseReportService _reportService;
+        private readonly SalesReportService _salesReportService;
         private readonly ExportService _exportService;
 
         [ObservableProperty] private object? _currentView;
@@ -26,6 +27,7 @@ namespace MyCraftyStash.ViewModels
         public ColorMatchViewModel     ColorMatchVM     { get; }
         public WishlistViewModel       WishlistVM       { get; }
         public PurchaseReportViewModel PurchaseReportVM { get; }
+        public SalesReportViewModel    SalesReportVM    { get; }
         public MyCraftyStash.Views.EnvelopeExpertView EnvelopeExpertView { get; private set; }
 
         public MainViewModel()
@@ -33,6 +35,7 @@ namespace MyCraftyStash.ViewModels
             _service        = new InventoryService();
             _wishlistService = new WishlistService(() => new Data.InventoryDbContext());
             _reportService  = new PurchaseReportService(() => new Data.InventoryDbContext());
+            _salesReportService = new SalesReportService(() => new Data.InventoryDbContext());
             _exportService  = new ExportService(() => new Data.InventoryDbContext());
 
             HomeVM           = new HomeViewModel(_service, this);
@@ -45,6 +48,7 @@ namespace MyCraftyStash.ViewModels
             ColorMatchVM     = new ColorMatchViewModel();
             WishlistVM       = new WishlistViewModel(_wishlistService, _service, this);
             PurchaseReportVM = new PurchaseReportViewModel(_reportService, _exportService);
+            SalesReportVM    = new SalesReportViewModel(_salesReportService, _exportService);
             EnvelopeExpertView = new MyCraftyStash.Views.EnvelopeExpertView();
 
             // Ensure wishlist table exists on startup
@@ -165,6 +169,13 @@ namespace MyCraftyStash.ViewModels
         {
             CurrentPage = "PurchaseReport";
             CurrentView = PurchaseReportVM;
+        }
+
+        [RelayCommand]
+        private void NavigateToSalesReport()
+        {
+            CurrentPage = "SalesReport";
+            CurrentView = SalesReportVM;
         }
 
         [RelayCommand]

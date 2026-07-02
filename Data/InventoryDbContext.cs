@@ -13,6 +13,7 @@ namespace MyCraftyStash.Data
         public DbSet<ItemImage> ItemImages { get; set; }
         public DbSet<ProjectImage> ProjectImages { get; set; }
         public DbSet<ItemPurchase> ItemPurchases { get; set; }
+        public DbSet<ItemSale> ItemSales { get; set; }
         public DbSet<InspirationImage> InspirationImages { get; set; }
         public DbSet<InspirationBoard> InspirationBoards { get; set; }
         public DbSet<SentimentImage> SentimentImages { get; set; }
@@ -49,6 +50,7 @@ namespace MyCraftyStash.Data
             modelBuilder.Entity<ProjectItem>().ToTable("project_items");
             modelBuilder.Entity<ItemRelationship>().ToTable("item_relationships");
             modelBuilder.Entity<ItemPurchase>().ToTable("item_purchases");
+            modelBuilder.Entity<ItemSale>().ToTable("item_sales");
 
             modelBuilder.Entity<Item>(entity =>
             {
@@ -115,6 +117,16 @@ namespace MyCraftyStash.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             });
 
+            modelBuilder.Entity<ItemSale>(entity =>
+            {
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.ItemId).HasColumnName("item_id");
+                entity.Property(e => e.Quantity).HasColumnName("quantity");
+                entity.Property(e => e.SalePrice).HasColumnName("sale_price");
+                entity.Property(e => e.DateSold).HasColumnName("date_sold");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            });
+
             modelBuilder.Entity<ProjectItem>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -175,6 +187,12 @@ namespace MyCraftyStash.Data
                 .HasOne(ip => ip.Item)
                 .WithMany(i => i.Purchases)
                 .HasForeignKey(ip => ip.ItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemSale>()
+                .HasOne(s => s.Item)
+                .WithMany(i => i.Sales)
+                .HasForeignKey(s => s.ItemId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // InspirationBoard

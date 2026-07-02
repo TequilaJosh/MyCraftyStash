@@ -51,6 +51,40 @@ namespace MyCraftyStash.Services
             return Task.FromResult(path);
         }
 
+        // ── Sales report CSV ─────────────────────────────────────────────────
+
+        public Task<string> ExportSalesReportCsvAsync(
+            List<SalesReportRow> rows, DateTime from, DateTime to)
+        {
+            var desktop  = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var fileName = $"SalesReport_{from:yyyyMMdd}_{to:yyyyMMdd}.csv";
+            var path     = Path.Combine(desktop, fileName);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Item Name,Type,Item Number,Date Sold,Qty,Sale Price,Line Total");
+            foreach (var r in rows)
+            {
+                sb.AppendLine(string.Join(",",
+                    CsvEscape(r.ItemName),
+                    CsvEscape(r.ItemType),
+                    CsvEscape(r.ItemNumber ?? string.Empty),
+                    r.Date.HasValue ? r.Date.Value.ToString("yyyy-MM-dd") : string.Empty,
+                    r.Quantity.ToString(),
+                    r.SalePrice.ToString("F2"),
+                    r.LineTotal.ToString("F2")));
+            }
+            // Totals row
+            sb.AppendLine(string.Join(",",
+                "TOTAL", "", "", "",
+                rows.Sum(r => r.Quantity).ToString(),
+                "",
+                rows.Sum(r => r.LineTotal).ToString("F2")));
+
+            File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+            LoggingService.LogInfo($"ExportService: sales CSV written to {path}");
+            return Task.FromResult(path);
+        }
+
         // ── Inventory CSV + optional images ZIP ─────────────────────────────
 
         public async Task<string> ExportInventoryCsvAsync(

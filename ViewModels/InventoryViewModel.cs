@@ -145,7 +145,32 @@ namespace MyCraftyStash.ViewModels
         
         [ObservableProperty]
         private DateTime? _newPurchaseDate;
-        
+
+        // ── Sales (revenue side; mirrors the purchase fields above) ──
+        [ObservableProperty]
+        private ObservableCollection<ItemSale> _itemSales = new();
+
+        [ObservableProperty]
+        private int _totalSold;
+
+        [ObservableProperty]
+        private decimal _totalRevenue;
+
+        [ObservableProperty]
+        private bool _isAddingSale;
+
+        [ObservableProperty]
+        private string? _saleErrorMessage;
+
+        [ObservableProperty]
+        private int _newSaleQuantity = 1;
+
+        [ObservableProperty]
+        private decimal? _newSalePrice;
+
+        [ObservableProperty]
+        private DateTime? _newSaleDate;
+
         [ObservableProperty]
         private string _newItemName = string.Empty;
 
@@ -1020,6 +1045,7 @@ namespace MyCraftyStash.ViewModels
             UpdateCurrentDisplayImage();
 
             await LoadItemPurchases();
+            await LoadItemSales();
             await LoadSentimentImages(item.Id);
 
             // All data loaded - now show the view so Edit button becomes available
@@ -1056,6 +1082,24 @@ namespace MyCraftyStash.ViewModels
                 var totals = await _service.GetItemPurchaseTotalsAsync(SelectedItem.Id);
                 TotalQuantity = totals.TotalQuantity;
                 TotalSpend = totals.TotalSpend;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex);
+            }
+        }
+
+        private async Task LoadItemSales()
+        {
+            if (SelectedItem == null) return;
+
+            try
+            {
+                var sales = await _service.GetItemSalesAsync(SelectedItem.Id);
+                ItemSales = new ObservableCollection<ItemSale>(sales);
+                var totals = await _service.GetItemSaleTotalsAsync(SelectedItem.Id);
+                TotalSold = totals.TotalQuantity;
+                TotalRevenue = totals.TotalRevenue;
             }
             catch (Exception ex)
             {
@@ -1656,6 +1700,103 @@ namespace MyCraftyStash.ViewModels
                 LoggingService.LogError(ex);
             }
         }
+
+        // ── Sales ────────────────────────────────────────────────────────────
+
+        /// <summary>Opens the "record a sale" form. When invoked from a specific
+        /// purchase row the sale is pre-filled from that purchase (quantity + the
+        /// price paid) so selling a previously purchased item is one click.</summary>
+        [RelayCommand]
+        private void StartAddSale(ItemPurchase? fromPurchase = null)
+        {
+            SaleErrorMessage = null;
+            NewSaleQuantity = fromPurchase?.Quantity ?? 1;
+            NewSalePrice = fromPurchase?.PricePerItem;
+            NewSaleDate = DateTime.Today;
+            IsAddingSale = true;
+        }
+
+        [RelayCommand]
+        private void CancelAddSale()
+        {
+            IsAddingSale = false;
+        }
+
+        [RelayCommand]
+        private async Task SaveSale()
+        {
+            if (SelectedItem == null) return;
+
+            if (NewSaleQuantity <= 0)
+            {
+                SaleErrorMessage = "Quantity must be at least 1.";
+                return;
+            }
+
+            try
+            {
+                var itemId = SelectedItem.Id;
+                var result = await _service.AddItemSaleAsync(
+                    itemId,
+                    NewSaleQuantity,
+                    NewSalePrice ?? 0,
+                    NewSaleDate
+                );
+
+                TotalSold = result.TotalQuantity;
+                TotalRevenue = result.TotalRevenue;
+
+                // Selling can change stock (tracked types); refresh the item so the
+                // detail view's stock badge updates.
+                if (result.UpdatedItem != null)
+                {
+                    var index = Items.ToList().FindIndex(i => i.Id == itemId);
+                    if (index >= 0)
+                    {
+                        Items[index] = result.UpdatedItem;
+                    }
+                    SelectedItem = result.UpdatedItem;
+                }
+
+                var sales = await _service.GetItemSalesAsync(itemId);
+                ItemSales = new ObservableCollection<ItemSale>(sales);
+
+                IsAddingSale = false;
+                NewSaleQuantity = 1;
+                NewSalePrice = null;
+                NewSaleDate = DateTime.Today;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex);
+                SaleErrorMessage = $"Failed to record sale: {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
+        private async Task DeleteSale(ItemSale sale)
+        {
+            try
+            {
+                await _service.DeleteItemSaleAsync(sale.Id);
+                // Stock is restored server-side; refresh the item + list.
+                if (SelectedItem != null)
+                {
+                    var refreshed = await _service.GetItemByIdAsync(SelectedItem.Id);
+                    if (refreshed != null)
+                    {
+                        var index = Items.ToList().FindIndex(i => i.Id == refreshed.Id);
+                        if (index >= 0) Items[index] = refreshed;
+                        SelectedItem = refreshed;
+                    }
+                }
+                await LoadItemSales();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex);
+            }
+        }
         
         public async Task StartAddItem()
         {
@@ -1910,17 +2051,17 @@ namespace MyCraftyStash.ViewModels
                     }
                 }
                 
-                // Automatically add purchase history entry if price is set
-                if (NewItemPrice.HasValue && NewItemPrice.Value > 0)
-                {
-                    await _service.AddItemPurchaseAsync(
-                        createdItem.Id,
-                        1, // Default quantity of 1 for new item
-                        NewItemPrice.Value,
-                        NewItemDatePurchased ?? DateTime.Today
-                    );
-                    LoggingService.LogInfo($"Purchase history entry added for item: {createdItem.Id}");
-                }
+                // Every new item gets an opening purchase-history entry (qty 1).
+                // This seeds the "bought" side of the bought-vs-sold count that
+                // drives the "Sold" card badge, and means the purchase history is
+                // never empty. Price defaults to 0 when none was entered.
+                await _service.AddItemPurchaseAsync(
+                    createdItem.Id,
+                    1, // Default quantity of 1 for new item
+                    NewItemPrice ?? 0,
+                    NewItemDatePurchased ?? DateTime.Today
+                );
+                LoggingService.LogInfo($"Opening purchase-history entry added for item: {createdItem.Id}");
                 
                 for (int i = 1; i < NewItemImages.Count; i++)
                 {

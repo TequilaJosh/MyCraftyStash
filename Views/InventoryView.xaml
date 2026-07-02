@@ -235,11 +235,15 @@
                                                     </TextBlock>
                                                 </Border>
                                             </StackPanel>
-                                            <!-- Bottom badges row: Discontinued (left) only -->
+                                            <!-- Bottom badges row: Discontinued (left), Sold (right) -->
                                             <Grid VerticalAlignment="Bottom" Margin="8,0,8,8">
                                                 <Border HorizontalAlignment="Left" Background="{DynamicResource DangerBrush}" CornerRadius="4" Padding="6,2"
                                                         Visibility="{Binding IsDiscontinued, Converter={StaticResource BoolToVisConverter}}">
                                                     <TextBlock Text="Discontinued" Foreground="White" FontSize="{DynamicResource CardBadgeFontSize}" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <Border HorizontalAlignment="Right" Background="{DynamicResource TextBrush}" CornerRadius="4" Padding="6,2"
+                                                        Visibility="{Binding IsSoldOut, Converter={StaticResource BoolToVisConverter}}">
+                                                    <TextBlock Text="SOLD" Foreground="{DynamicResource BackgroundBrush}" FontSize="{DynamicResource CardBadgeFontSize}" FontWeight="Bold"/>
                                                 </Border>
                                             </Grid>
                                         </Grid>
@@ -869,6 +873,7 @@
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                                 <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
                                                             <Border Grid.Column="0" Background="{DynamicResource PrimaryLightBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
                                                                 <TextBlock Text="{Binding Quantity, StringFormat='x{0}'}" Foreground="White" FontWeight="SemiBold"/>
@@ -877,16 +882,25 @@
                                                                 <TextBlock Text="{Binding PricePerItem, StringFormat='${0:F2} each'}" Foreground="{DynamicResource TextBrush}"/>
                                                                 <TextBlock Text="{Binding DatePurchased, StringFormat='d'}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                                             </StackPanel>
-                                                            <TextBlock Grid.Column="2" 
-                                                                       Text="{Binding TotalPrice, StringFormat='${0:F2}'}" 
-                                                                       FontWeight="SemiBold" 
-                                                                       Foreground="{DynamicResource SuccessBrush}" 
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding TotalPrice, StringFormat='${0:F2}'}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource SuccessBrush}"
                                                                        VerticalAlignment="Center"
                                                                        Margin="0,0,16,0"/>
-                                                            <Button Grid.Column="3" 
-                                                                    Style="{StaticResource SecondaryButton}" 
-                                                                    Content="X" 
-                                                                    Width="28" Height="28"
+                                                            <Button Grid.Column="3"
+                                                                    Style="{StaticResource SecondaryButton}"
+                                                                    Content="Sell"
+                                                                    Padding="12,4"
+                                                                    Margin="0,0,8,0"
+                                                                    ToolTip="Record a sale of this item, pre-filled from this purchase"
+                                                                    Command="{Binding DataContext.StartAddSaleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"/>
+                                                            <Button Grid.Column="4"
+                                                                    Style="{StaticResource SecondaryButton}"
+                                                                    Content="✕"
+                                                                    Width="28" Height="28" Padding="0"
+                                                                    ToolTip="Delete this purchase"
                                                                     Foreground="{DynamicResource DangerBrush}"
                                                                     Command="{Binding DataContext.DeletePurchaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"/>
@@ -896,11 +910,125 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         
-                                        <TextBlock Text="No purchases recorded yet" 
-                                                   Foreground="{DynamicResource TextMutedBrush}" 
+                                        <TextBlock Text="No purchases recorded yet"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
                                                    HorizontalAlignment="Center"
                                                    Margin="0,8,0,0"
                                                    Visibility="{Binding ItemPurchases.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Sales History Section -->
+                                <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,16">
+                                            <TextBlock Text="Sales History" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Border Background="{DynamicResource SidebarBrush}" CornerRadius="4" Padding="12,6" Margin="0,0,8,0">
+                                                    <TextBlock Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold">
+                                                        <Run Text="Sold: "/>
+                                                        <Run Text="{Binding TotalSold, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <Border Background="{DynamicResource SidebarBrush}" CornerRadius="4" Padding="12,6" Margin="0,0,12,0">
+                                                    <TextBlock Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold">
+                                                        <Run Text="Revenue: $"/>
+                                                        <Run Text="{Binding TotalRevenue, Mode=OneWay, StringFormat='{}{0:F2}'}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <Button Style="{StaticResource PrimaryButton}"
+                                                        Content="Record Sale"
+                                                        Command="{Binding StartAddSaleCommand}"
+                                                        Visibility="{Binding IsAddingSale, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Add Sale Form -->
+                                        <Border Background="{DynamicResource SidebarBrush}"
+                                                CornerRadius="8"
+                                                Padding="16"
+                                                Margin="0,0,0,16"
+                                                Visibility="{Binding IsAddingSale, Converter={StaticResource BoolToVisConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="Record a Sale" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                        <TextBlock Text="Quantity" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewSaleQuantity, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                        <TextBlock Text="Sale Price (each)" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewSalePrice, TargetNullValue=''}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="Date Sold" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                                        <DatePicker SelectedDate="{Binding NewSaleDate}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Text="{Binding SaleErrorMessage}"
+                                                           Foreground="{DynamicResource DangerBrush}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,8,0,0"
+                                                           Visibility="{Binding SaleErrorMessage, Converter={StaticResource NullToVisConverter}, ConverterParameter=Inverse}"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                                                    <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelAddSaleCommand}" Margin="0,0,8,0"/>
+                                                    <Button Style="{StaticResource PrimaryButton}" Content="Save Sale" Command="{Binding SaveSaleCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Sales List -->
+                                        <ItemsControl ItemsSource="{Binding ItemSales}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource SidebarBrush}"
+                                                            CornerRadius="6"
+                                                            Padding="12"
+                                                            Margin="0,0,0,8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border Grid.Column="0" Background="{DynamicResource SuccessBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                                                                <TextBlock Text="{Binding Quantity, StringFormat='x{0}'}" Foreground="White" FontWeight="SemiBold"/>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding SalePrice, StringFormat='${0:F2} each'}" Foreground="{DynamicResource TextBrush}"/>
+                                                                <TextBlock Text="{Binding DateSold, StringFormat='d'}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding TotalPrice, StringFormat='${0:F2}'}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,16,0"/>
+                                                            <Button Grid.Column="3"
+                                                                    Style="{StaticResource SecondaryButton}"
+                                                                    Content="✕"
+                                                                    Width="28" Height="28" Padding="0"
+                                                                    ToolTip="Delete this sale"
+                                                                    Foreground="{DynamicResource DangerBrush}"
+                                                                    Command="{Binding DataContext.DeleteSaleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="No sales recorded yet"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"
+                                                   Visibility="{Binding ItemSales.Count, Converter={StaticResource CountToVisConverter}, ConverterParameter=Inverse}"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

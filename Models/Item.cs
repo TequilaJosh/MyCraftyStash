@@ -65,5 +65,22 @@ namespace MyCraftyStash.Models
         public virtual ICollection<ProjectItem> ProjectItems { get; set; } = new List<ProjectItem>();
         public virtual ICollection<ItemImage> Images { get; set; } = new List<ItemImage>();
         public virtual ICollection<ItemPurchase> Purchases { get; set; } = new List<ItemPurchase>();
+        public virtual ICollection<ItemSale> Sales { get; set; } = new List<ItemSale>();
+
+        // ── Transient bought-vs-sold counts (not persisted) ──────────────────
+        // Populated by InventoryService when loading items so cards can show a
+        // "Sold" badge. TotalBought = sum of purchase quantities; TotalSold =
+        // sum of sale quantities.
+        [NotMapped]
+        public int TotalBought { get; set; }
+
+        [NotMapped]
+        public int TotalSold { get; set; }
+
+        /// <summary>True once every purchased unit has been sold (the user sold
+        /// their last remaining one). Guards on TotalBought so items with no
+        /// recorded purchases never falsely read as sold.</summary>
+        [NotMapped]
+        public bool IsSoldOut => TotalBought > 0 && TotalSold >= TotalBought;
     }
 }
