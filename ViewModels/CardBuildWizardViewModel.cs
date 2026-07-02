@@ -1272,6 +1272,9 @@ namespace MyCraftyStash.ViewModels
             // The Details page is shared across many parent flows (cardbase, mats, sentiments).
             // Setting DetailsReturnTarget tells the page where Save & Return should navigate
             // and which saved flag to flip.
+            // Start from a blank form on entry: the shared pickers otherwise keep the
+            // values from whatever section (or the outside of the card) was edited last.
+            ClearDetailSelections();
             DetailsReturnTarget = "CardBase";
             CurrentCardBaseStep = "Details";
         }
@@ -2428,6 +2431,9 @@ namespace MyCraftyStash.ViewModels
         {
             // Tag the Details panel with the current mat target so Save & Return
             // knows whether to flip BgMatHubStep back for Background or Additional.
+            // Blank the shared form on entry so a mat doesn't inherit the previous
+            // section's detail selections.
+            ClearDetailSelections();
             DetailsReturnTarget = CurrentMatTarget;
             BgMatHubStep = "Details";
         }
@@ -2985,6 +2991,33 @@ namespace MyCraftyStash.ViewModels
             // when they hit the toggle, jump back to the hub so the banner shows.
             CurrentSection = "Hub";
         }
+
+        // ── Inside-hub "Done!" indicators ────────────────────────────────────
+        // The outside *Saved flags (BackgroundMatSaved, SentimentSaved, …) count
+        // ALL content regardless of side, so the inside hub used to inherit the
+        // outside's "- Done!" state. These inside-scoped views are derived from
+        // the same inside content the summary tracks, so each inside button
+        // reflects only what's been built on the inside. Refreshed from
+        // UpdateSummaryLines() after every content change.
+        public bool InsideBackgroundMatDone =>
+            BgMats.Any(g => g.IsInside && g.Pieces.Count > 0) || InsideBgMats.Count > 0;
+        public bool InsideAdditionalMatDone =>
+            AdditionalMats.Any(g => g.IsInside && g.Pieces.Count > 0) || InsideAdditionalMats.Count > 0;
+        public bool InsideFocalMatDone =>
+            FocalMatGroups.Any(g => g.IsInside && g.Pieces.Count > 0) || HasInsideFocalMat;
+        public bool InsideSentimentDone =>
+            ConfiguredSentiments.Any(s => s.IsInside) || ConfiguredInsideSentiments.Count > 0;
+        public bool InsideEmbellishmentsDone =>
+            AddedEmbellishments.Any(e => e.IsInside) || InsideAddedEmbellishments.Count > 0;
+
+        private void NotifyInsideDoneIndicators()
+        {
+            OnPropertyChanged(nameof(InsideBackgroundMatDone));
+            OnPropertyChanged(nameof(InsideAdditionalMatDone));
+            OnPropertyChanged(nameof(InsideFocalMatDone));
+            OnPropertyChanged(nameof(InsideSentimentDone));
+            OnPropertyChanged(nameof(InsideEmbellishmentsDone));
+        }
         [RelayCommand]
         private void BackToHub()
         {
@@ -3030,6 +3063,9 @@ namespace MyCraftyStash.ViewModels
         [RelayCommand]
         private void NavToInsideDetails()
         {
+            // Blank the shared form so the inside of the card doesn't inherit the
+            // outside's detail selections.
+            ClearDetailSelections();
             DetailsReturnTarget = "InsideMisc";
             CurrentSection = "InsideDetails";
         }
@@ -3081,6 +3117,9 @@ namespace MyCraftyStash.ViewModels
 
         public void UpdateSummaryLines()
         {
+            // Keep the inside-hub "- Done!" indicators in sync with inside content.
+            NotifyInsideDoneIndicators();
+
             SummaryLines.Clear();
 
             // Helper closures to keep the build below readable.
@@ -4256,6 +4295,8 @@ namespace MyCraftyStash.ViewModels
         [RelayCommand]
         private void NavSentimentToDetails()
         {
+            // Blank the shared form on entry (see NavCardBaseToDetails).
+            ClearDetailSelections();
             DetailsReturnTarget = "Sentiment";
             SentimentSubStep = "Details";
         }

@@ -605,7 +605,7 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Sentiment"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SentimentSaved}" Value="True">
+                                        <DataTrigger Binding="{Binding InsideSentimentDone}" Value="True">
                                             <Setter Property="Content" Value="Sentiment - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -620,7 +620,7 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Background Mat"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding BackgroundMatSaved}" Value="True">
+                                        <DataTrigger Binding="{Binding InsideBackgroundMatDone}" Value="True">
                                             <Setter Property="Content" Value="Background Mat - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -633,7 +633,7 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Embellishments"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding EmbellishmentsSaved}" Value="True">
+                                        <DataTrigger Binding="{Binding InsideEmbellishmentsDone}" Value="True">
                                             <Setter Property="Content" Value="Embellishments - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -648,7 +648,7 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Additional Mat"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AdditionalMatSaved}" Value="True">
+                                        <DataTrigger Binding="{Binding InsideAdditionalMatDone}" Value="True">
                                             <Setter Property="Content" Value="Additional Mat - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -676,7 +676,7 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource HubButton}">
                                     <Setter Property="Content" Value="Focal Mat"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding FocalMatSaved}" Value="True">
+                                        <DataTrigger Binding="{Binding InsideFocalMatDone}" Value="True">
                                             <Setter Property="Content" Value="Focal Mat - Done!"/>
                                         </DataTrigger>
                                     </Style.Triggers>
