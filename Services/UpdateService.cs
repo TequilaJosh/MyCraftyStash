@@ -124,6 +124,14 @@ namespace MyCraftyStash.Services
                         Error = $"Release v{latest} exists but has no installer attached.",
                     };
 
+                // Only ever offer a download served from GitHub's own hosts.
+                if (!IsTrustedDownloadUrl(assetUrl))
+                    return new UpdateCheckResult
+                    {
+                        LatestVersion = latest,
+                        Error = "The release installer is not hosted on GitHub; refusing to download it.",
+                    };
+
                 return new UpdateCheckResult
                 {
                     UpdateAvailable = true,
@@ -164,6 +172,11 @@ namespace MyCraftyStash.Services
             IProgress<(long bytes, long total)>? progress = null,
             CancellationToken ct = default)
         {
+            // Defense-in-depth: never fetch an installer from a non-GitHub host,
+            // even if a caller passes one through.
+            if (!IsTrustedDownloadUrl(assetUrl))
+                throw new InvalidOperationException("Refusing to download an installer from a non-GitHub host.");
+
             Directory.CreateDirectory(DownloadFolder);
 
             // Drop leftovers from previous update attempts so the temp folder
@@ -321,6 +334,16 @@ namespace MyCraftyStash.Services
             if (v.Revision < 0) return new Version(v.Major, v.Minor, v.Build, 0);
             return v;
         }
+
+        /// <summary>Only trust release-asset URLs served from GitHub's own hosts.
+        /// Guards against a spoofed / redirected browser_download_url pointing the
+        /// updater at an attacker-controlled binary.</summary>
+        private static bool IsTrustedDownloadUrl(string? url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out var u)
+            && u.Scheme == Uri.UriSchemeHttps
+            && (u.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+                || u.Host.EndsWith(".github.com", StringComparison.OrdinalIgnoreCase)
+                || u.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase));
 
         private static string SanitizeFileName(string? name)
         {

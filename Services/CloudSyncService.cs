@@ -639,6 +639,13 @@ namespace MyCraftyStash.Services
         {
             if (string.IsNullOrWhiteSpace(url)) return string.Empty;
             var trimmed = url.Trim();
+            // Force HTTPS: every sync sends an X-Api-Key header plus the whole
+            // stash, which must never travel in cleartext. Upgrade an http://
+            // typo and add the scheme when the user pasted a bare host.
+            if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                trimmed = "https://" + trimmed["http://".Length..];
+            else if (!trimmed.Contains("://"))
+                trimmed = "https://" + trimmed;
             // Strip a trailing slash so we can build URLs by concatenating "/api/...".
             while (trimmed.EndsWith('/')) trimmed = trimmed[..^1];
             return trimmed;

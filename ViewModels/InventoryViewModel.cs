@@ -1642,7 +1642,18 @@ namespace MyCraftyStash.ViewModels
         private async Task SavePurchase()
         {
             if (SelectedItem == null) return;
-            
+
+            if (NewPurchaseQuantity <= 0)
+            {
+                PurchaseErrorMessage = "Quantity must be at least 1.";
+                return;
+            }
+            if ((NewPurchasePrice ?? 0) < 0)
+            {
+                PurchaseErrorMessage = "Price cannot be negative.";
+                return;
+            }
+
             try
             {
                 var itemId = SelectedItem.Id;
@@ -1730,6 +1741,20 @@ namespace MyCraftyStash.ViewModels
             if (NewSaleQuantity <= 0)
             {
                 SaleErrorMessage = "Quantity must be at least 1.";
+                return;
+            }
+            if ((NewSalePrice ?? 0) < 0)
+            {
+                SaleErrorMessage = "Sale price cannot be negative.";
+                return;
+            }
+            // Block overselling a tracked item: it would clamp stock to 0 and make
+            // the sale non-reversible (deleting it would restore phantom stock).
+            if (InventoryService.IsTrackedType(SelectedItem.Type)
+                && SelectedItem.PackSize is int ps && ps > 0
+                && (SelectedItem.CurrentStock ?? 0) < NewSaleQuantity * ps)
+            {
+                SaleErrorMessage = $"Not enough stock — {SelectedItem.CurrentStock ?? 0} in stock, this sale needs {NewSaleQuantity * ps}.";
                 return;
             }
 
@@ -2059,7 +2084,8 @@ namespace MyCraftyStash.ViewModels
                     createdItem.Id,
                     1, // Default quantity of 1 for new item
                     NewItemPrice ?? 0,
-                    NewItemDatePurchased ?? DateTime.Today
+                    NewItemDatePurchased ?? DateTime.Today,
+                    adjustStock: false // stock was already set on the item; don't double-count
                 );
                 LoggingService.LogInfo($"Opening purchase-history entry added for item: {createdItem.Id}");
                 

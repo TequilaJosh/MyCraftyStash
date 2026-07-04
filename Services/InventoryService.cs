@@ -1447,8 +1447,14 @@ namespace MyCraftyStash.Services
             }
         }
         
-        public async Task<(ItemPurchase Purchase, int TotalQuantity, decimal TotalSpend, Item? UpdatedItem)> AddItemPurchaseAsync(int itemId, int quantity, decimal pricePerItem, DateTime? datePurchased = null)
+        /// <param name="adjustStock">When true (the default) a tracked item's
+        /// CurrentStock is increased by quantity*PackSize. Pass false for the
+        /// opening purchase seeded at item creation, where the user already
+        /// entered the starting stock directly (otherwise it double-counts).</param>
+        public async Task<(ItemPurchase Purchase, int TotalQuantity, decimal TotalSpend, Item? UpdatedItem)> AddItemPurchaseAsync(int itemId, int quantity, decimal pricePerItem, DateTime? datePurchased = null, bool adjustStock = true)
         {
+            if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "Purchase quantity must be greater than zero.");
+            if (pricePerItem < 0) throw new ArgumentOutOfRangeException(nameof(pricePerItem), "Purchase price cannot be negative.");
             try
             {
                 using var context = CreateContext();
@@ -1487,8 +1493,10 @@ namespace MyCraftyStash.Services
                     item.Price = latestPrice;
                     item.DatePurchased = latestPurchase.DatePurchased;
 
-                    // For tracked item types, add stock: quantity * packSize sheets/items
-                    if (IsTrackedType(item.Type) && item.PackSize.HasValue && item.PackSize.Value > 0)
+                    // For tracked item types, add stock: quantity * packSize sheets/items.
+                    // Skipped for the opening purchase at item creation (adjustStock=false),
+                    // where the starting stock was already entered on the item.
+                    if (adjustStock && IsTrackedType(item.Type) && item.PackSize.HasValue && item.PackSize.Value > 0)
                     {
                         var stockToAdd = quantity * item.PackSize.Value;
                         item.CurrentStock = (item.CurrentStock ?? 0) + stockToAdd;
@@ -1607,6 +1615,8 @@ namespace MyCraftyStash.Services
 
         public async Task<(ItemSale Sale, int TotalQuantity, decimal TotalRevenue, Item? UpdatedItem)> AddItemSaleAsync(int itemId, int quantity, decimal salePrice, DateTime? dateSold = null)
         {
+            if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "Sale quantity must be greater than zero.");
+            if (salePrice < 0) throw new ArgumentOutOfRangeException(nameof(salePrice), "Sale price cannot be negative.");
             try
             {
                 using var context = CreateContext();
