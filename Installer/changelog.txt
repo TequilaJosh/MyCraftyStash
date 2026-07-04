@@ -10,6 +10,17 @@
 #
 # New sections go ABOVE older ones.
 
+## 1.1.0.4
+- Change or replace an item's photo and Cloud Sync now updates it on your
+  phone right away — no more seeing the old picture.
+- Cloud Sync only shows a "last synced" time once everything has actually
+  finished uploading.
+- Fixed a few counting glitches so recording a sale, undoing one, or adding
+  a new item keeps your stock numbers accurate.
+- Sturdier handling of large photos when importing a shared project or
+  looking up an item online.
+- General speed and stability improvements.
+
 ## 1.1.0.1
 - The Home page greets you by name once Cloud Sync is set up, using the
   first name from the Google account you sign in with on the website.
