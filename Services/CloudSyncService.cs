@@ -432,9 +432,15 @@ namespace MyCraftyStash.Services
                 }
             }
 
-            // 5. Stamp the last-sync metadata.
-            UserSettingsService.SetSettingValue(KeyLastSyncUtc,
-                DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+            // 5. Stamp the last-sync metadata — but only mark a clean sync as
+            // "successful". If any batch/image failed, leave the previous
+            // LastSyncUtc so the Settings tab doesn't claim a fresh, complete
+            // sync when part of the stash never made it up.
+            if (result.Errors.Count == 0)
+            {
+                UserSettingsService.SetSettingValue(KeyLastSyncUtc,
+                    DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+            }
             UserSettingsService.SetSettingValue(KeyLastItems, result.ItemsUploaded.ToString());
             UserSettingsService.SetSettingValue(KeyLastImages, result.ImagesUploaded.ToString());
 
@@ -568,16 +574,14 @@ namespace MyCraftyStash.Services
               .Append(i.Location).Append('|').Append(i.Notes).Append('|')
               .Append(i.SiteUrl).Append('|');
 
-            // Image bytes hash separately so we don't redo huge SHA-256 work
-            // on the whole base64 string for unchanged photos: just take the
-            // length and a sampled prefix. Collisions here only cost an
-            // unneeded re-upload, never data loss.
+            // Hash the FULL image data URI. Sampling only the length + a short
+            // prefix used to collide constantly — two different photos from the
+            // same encoder share the base64 header and are often a similar size,
+            // so an edited image hashed identically and was never re-uploaded
+            // (the phone kept showing the old photo). SHA-256 over the whole
+            // string is microseconds per item, so just include it.
             if (!string.IsNullOrEmpty(i.ImageUrl))
-            {
-                sb.Append("img:").Append(i.ImageUrl.Length).Append(':');
-                int sample = Math.Min(128, i.ImageUrl.Length);
-                sb.Append(i.ImageUrl, 0, sample);
-            }
+                sb.Append("img:").Append(i.ImageUrl);
 
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));

@@ -15,6 +15,17 @@ namespace MyCraftyStash
         {
             base.OnStartup(e);
 
+            // Bound Magick.NET's decoder so a malformed or maliciously huge image
+            // (e.g. a scraped catalog picture or an imported .mcsproject) can't
+            // exhaust memory while decoding. Global, set once.
+            try
+            {
+                ImageMagick.ResourceLimits.Width = 30000;
+                ImageMagick.ResourceLimits.Height = 30000;
+                ImageMagick.ResourceLimits.Memory = 512UL * 1024 * 1024; // 512 MB
+            }
+            catch { /* older Magick.NET without one of these knobs — non-fatal */ }
+
             EventManager.RegisterClassHandler(typeof(ComboBox), UIElement.PreviewMouseWheelEvent,
                 new MouseWheelEventHandler((s, args) =>
                 {

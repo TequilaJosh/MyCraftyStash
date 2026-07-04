@@ -72,8 +72,31 @@ namespace MyCraftyStash.Services
                 var inZipPath = url.Substring("mcsproject:".Length);
                 var imgEntry = archive.GetEntry(inZipPath);
                 if (imgEntry == null) return null;
+
+                // .mcsproject files come from other users, so treat the archive as
+                // untrusted: cap each inlined image so a decompression bomb can't
+                // OOM the app. Check the declared size first (fast reject), then
+                // bound the actual copy — a crafted zip can understate Length.
+                const long MaxImageBytes = 25 * 1024 * 1024; // 25 MB
+                if (imgEntry.Length > MaxImageBytes)
+                    throw new InvalidDataException(
+                        $"Image '{inZipPath}' in the .mcsproject is too large ({imgEntry.Length / (1024 * 1024)} MB; max 25 MB).");
+
                 using var ms = new MemoryStream();
-                using (var es = imgEntry.Open()) es.CopyTo(ms);
+                using (var es = imgEntry.Open())
+                {
+                    var buffer = new byte[81920];
+                    long total = 0;
+                    int read;
+                    while ((read = es.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        total += read;
+                        if (total > MaxImageBytes)
+                            throw new InvalidDataException(
+                                $"Image '{inZipPath}' in the .mcsproject expands beyond the 25 MB limit.");
+                        ms.Write(buffer, 0, read);
+                    }
+                }
                 var bytes = ms.ToArray();
                 var ext = Path.GetExtension(inZipPath).TrimStart('.').ToLowerInvariant();
                 var mime = ext switch

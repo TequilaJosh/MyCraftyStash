@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using ImageMagick;
 
@@ -15,13 +16,29 @@ namespace MyCraftyStash.Services.Catalog
     /// </summary>
     public static class RemoteImageFetcher
     {
+        // Scraped product images should be well under this. Cap the download so a
+        // hostile / accidental huge response can't OOM the app or bloat SQLite.
+        private const long MaxImageBytes = 15 * 1024 * 1024; // 15 MB
+
         public static async Task<string?> DownloadAsDataUriAsync(string url, CancellationToken ct = default)
         {
             try
             {
-                using var resp = await CatalogHttpClient.Instance.GetAsync(url, ct);
+                using var resp = await CatalogHttpClient.Instance.GetAsync(
+                    url, HttpCompletionOption.ResponseHeadersRead, ct);
                 if (!resp.IsSuccessStatusCode) return null;
-                var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                // Fast reject when the server declares an oversized body.
+                if (resp.Content.Headers.ContentLength is long declared && declared > MaxImageBytes)
+                {
+                    LoggingService.LogWarning($"RemoteImageFetcher: {url} exceeds {MaxImageBytes} bytes (declared {declared}); skipping.");
+                    return null;
+                }
+                var bytes = await ReadCappedAsync(resp.Content, MaxImageBytes, ct);
+                if (bytes is null)
+                {
+                    LoggingService.LogWarning($"RemoteImageFetcher: {url} exceeded {MaxImageBytes} bytes mid-stream; skipping.");
+                    return null;
+                }
                 if (bytes.Length == 0) return null;
 
                 // Detect WebP via the RIFF/WEBP container signature (bytes 0..3
@@ -61,6 +78,23 @@ namespace MyCraftyStash.Services.Catalog
                 LoggingService.LogError(ex, $"RemoteImageFetcher.DownloadAsDataUriAsync ({url})");
                 return null;
             }
+        }
+
+        /// <summary>Reads the response body but returns null the moment it passes
+        /// maxBytes, so a chunked (no Content-Length) response can't stream an
+        /// unbounded body past the cap.</summary>
+        private static async Task<byte[]?> ReadCappedAsync(HttpContent content, long maxBytes, CancellationToken ct)
+        {
+            await using var src = await content.ReadAsStreamAsync(ct);
+            using var buffer = new MemoryStream();
+            var chunk = new byte[81920];
+            int read;
+            while ((read = await src.ReadAsync(chunk, ct)) > 0)
+            {
+                if (buffer.Length + read > maxBytes) return null;
+                buffer.Write(chunk, 0, read);
+            }
+            return buffer.ToArray();
         }
 
         private static bool IsWebP(byte[] bytes) =>
