@@ -815,7 +815,15 @@ namespace MyCraftyStash.ViewModels
         {
             LoadSubtypeCheckboxes(value);
             if (!string.IsNullOrWhiteSpace(value)) NewItemTypeHasError = false;
+            OnPropertyChanged(nameof(ShowStencilLayers));
         }
+
+        /// <summary>Whether to show the "Number of Layers" input on the add/edit
+        /// form: true when the type OR any selected subtype contains "stencil".</summary>
+        public bool ShowStencilLayers =>
+            NewItemType.Contains("stencil", StringComparison.OrdinalIgnoreCase)
+            || SubtypeCheckboxes.Any(c => c.IsChecked
+                   && (c.Label?.Contains("stencil", StringComparison.OrdinalIgnoreCase) ?? false));
 
         partial void OnNewItemNameChanged(string value)
         {
@@ -947,9 +955,19 @@ namespace MyCraftyStash.ViewModels
             {
                 var subtypes = UserSettingsService.GetSubtypesForType(type);
                 foreach (var s in subtypes)
-                    SubtypeCheckboxes.Add(new SubtypeCheckboxItem { Label = s });
+                {
+                    var cb = new SubtypeCheckboxItem { Label = s };
+                    // Checking a "stencil" subtype should reveal the layers field.
+                    cb.PropertyChanged += (_, e) =>
+                    {
+                        if (e.PropertyName == nameof(SubtypeCheckboxItem.IsChecked))
+                            OnPropertyChanged(nameof(ShowStencilLayers));
+                    };
+                    SubtypeCheckboxes.Add(cb);
+                }
             }
             OnPropertyChanged(nameof(HasSubtypeCheckboxes));
+            OnPropertyChanged(nameof(ShowStencilLayers));
         }
 
         private string GetSelectedSubtype()

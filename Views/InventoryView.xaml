@@ -1592,8 +1592,8 @@
                                          MinHeight="120"
                                          VerticalContentAlignment="Top"/>
 
-                                <!-- Stencil Layers - only visible when Type contains "stencil" -->
-                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}">
+                                <!-- Number of Layers - visible when the type OR a selected subtype contains "stencil" -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding ShowStencilLayers, Converter={StaticResource BoolToVisConverter}}">
                                     <TextBlock Text="Number of Layers" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
                                     <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemStencilLayers, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left"/>
                                 </StackPanel>
@@ -2176,8 +2176,8 @@
                                          MinHeight="120"
                                          VerticalContentAlignment="Top"/>
 
-                                <!-- Stencil Layers - only visible when Type contains "stencil" -->
-                                <StackPanel Margin="0,12,0,0" Visibility="{Binding NewItemType, Converter={StaticResource StringContainsVisConverter}, ConverterParameter=stencil}">
+                                <!-- Number of Layers - visible when the type OR a selected subtype contains "stencil" -->
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding ShowStencilLayers, Converter={StaticResource BoolToVisConverter}}">
                                     <TextBlock Text="Number of Layers" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
                                     <TextBox Style="{StaticResource SearchTextBox}" Text="{Binding NewItemStencilLayers, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left"/>
                                 </StackPanel>
