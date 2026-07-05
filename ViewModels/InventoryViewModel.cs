@@ -75,6 +75,13 @@ namespace MyCraftyStash.ViewModels
         private ObservableCollection<SubtypeCheckboxItem> _searchSubtypeFilters = new();
 
         public bool HasSearchSubtypeFilters => SearchSubtypeFilters.Count > 0;
+
+        // Theme checkboxes shown in the search bar instead of subtypes while
+        // "Theme only" is checked
+        [ObservableProperty]
+        private ObservableCollection<SubtypeCheckboxItem> _searchThemeFilters = new();
+
+        public bool HasSearchThemeFilters => SearchThemeFilters.Count > 0;
         
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsTrackedItem))]
@@ -693,7 +700,8 @@ namespace MyCraftyStash.ViewModels
         private async Task LoadItems()
         {
             var selectedSubtypes = SearchSubtypeFilters.Where(s => s.IsChecked).Select(s => s.Label).ToList();
-            bool hasFilters = !string.IsNullOrWhiteSpace(SearchText) || SelectedType != null || SelectedTheme != null || NoPictureOnly || DiscontinuedOnly || selectedSubtypes.Count > 0;
+            var selectedThemes = SearchThemeFilters.Where(s => s.IsChecked).Select(s => s.Label).ToList();
+            bool hasFilters = !string.IsNullOrWhiteSpace(SearchText) || SelectedType != null || SelectedTheme != null || NoPictureOnly || DiscontinuedOnly || selectedSubtypes.Count > 0 || selectedThemes.Count > 0;
             
             if (!_itemsAreDirty && !hasFilters && _cachedItemsList != null && Items.Count > 0)
             {
@@ -705,7 +713,7 @@ namespace MyCraftyStash.ViewModels
             {
                 IsLoading = true;
                 string? searchMode = SearchByName ? "name" : SearchByTheme ? "theme" : null;
-                var items = await _service.GetItemsAsync(SearchText, SelectedType, SelectedTheme, searchMode: searchMode, noPictureOnly: NoPictureOnly, subtypes: selectedSubtypes.Count > 0 ? selectedSubtypes : null, discontinuedOnly: DiscontinuedOnly);
+                var items = await _service.GetItemsAsync(SearchText, SelectedType, SelectedTheme, searchMode: searchMode, noPictureOnly: NoPictureOnly, subtypes: selectedSubtypes.Count > 0 ? selectedSubtypes : null, themes: selectedThemes.Count > 0 ? selectedThemes : null, discontinuedOnly: DiscontinuedOnly);
                 Items = new ObservableCollection<Item>(items);
                 
                 // Kick off background thumbnail preloading so images are ready when user scrolls
@@ -762,8 +770,31 @@ namespace MyCraftyStash.ViewModels
 
         partial void OnSearchByThemeChanged(bool value)
         {
-            if (value) SearchByName = false;
-            TriggerSearch();
+            if (value)
+            {
+                SearchByName = false;
+
+                // "Theme only" swaps the filter-chip row from subtypes to themes.
+                SearchSubtypeFilters.Clear();
+                OnPropertyChanged(nameof(HasSearchSubtypeFilters));
+
+                SearchThemeFilters.Clear();
+                foreach (var theme in ThemeOptions)
+                {
+                    var cb = new SubtypeCheckboxItem { Label = theme };
+                    cb.PropertyChanged += (_, _) => TriggerSearch();
+                    SearchThemeFilters.Add(cb);
+                }
+                OnPropertyChanged(nameof(HasSearchThemeFilters));
+                TriggerSearch();
+            }
+            else
+            {
+                SearchThemeFilters.Clear();
+                OnPropertyChanged(nameof(HasSearchThemeFilters));
+                // Restore the subtype chips for the selected type (also searches).
+                OnSelectedTypeChanged(SelectedType);
+            }
         }
 
         partial void OnNoPictureOnlyChanged(bool value) => TriggerSearch();
@@ -775,7 +806,8 @@ namespace MyCraftyStash.ViewModels
             SearchSubtypeFilters.Clear();
             OnPropertyChanged(nameof(HasSearchSubtypeFilters));
 
-            if (!string.IsNullOrEmpty(value))
+            // In "Theme only" mode the chip row shows themes, not subtypes.
+            if (!string.IsNullOrEmpty(value) && !SearchByTheme)
             {
                 if (value == "Combo Club")
                 {

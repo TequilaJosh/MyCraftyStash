@@ -307,7 +307,7 @@ namespace MyCraftyStash.Services
             return bestIndex >= 0 ? bestIndex : int.MaxValue;
         }
         
-        public async Task<List<Item>> GetItemsAsync(string? search = null, string? type = null, string? theme = null, string? sentiment = null, string? searchMode = null, bool noPictureOnly = false, List<string>? subtypes = null, bool discontinuedOnly = false)
+        public async Task<List<Item>> GetItemsAsync(string? search = null, string? type = null, string? theme = null, string? sentiment = null, string? searchMode = null, bool noPictureOnly = false, List<string>? subtypes = null, List<string>? themes = null, bool discontinuedOnly = false)
         {
             try
             {
@@ -408,6 +408,16 @@ namespace MyCraftyStash.Services
                                 i.Subtype.Split(',').Select(s => s.Trim())
                                          .Contains(selected, StringComparer.OrdinalIgnoreCase))).ToList();
                     }
+                }
+
+                if (themes != null && themes.Count > 0)
+                {
+                    // Themes are stored comma-separated; keep items matching ANY checked theme.
+                    var themeSet = themes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    items = items.Where(i =>
+                        i.Theme != null &&
+                        i.Theme.Split(',').Select(t => t.Trim())
+                               .Any(t => themeSet.Contains(t))).ToList();
                 }
 
                 var sorted = ApplySortOrder(items);
