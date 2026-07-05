@@ -44,6 +44,66 @@ namespace MyCraftyStash.Views
             }
         }
 
+        // Middle-click (mouse wheel button) on a card opens the project in a new tab
+        private void ProjectCard_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle &&
+                sender is FrameworkElement element && element.DataContext is Project project &&
+                DataContext is ProjectsViewModel vm)
+            {
+                vm.OpenProjectInTabCommand.Execute(project);
+                e.Handled = true;
+            }
+        }
+
+        // Card right-click > "Open in New Tab" (ContextMenu inherits the card's Project DataContext)
+        private void OpenProjectInNewTab_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is Project project &&
+                DataContext is ProjectsViewModel vm)
+            {
+                vm.OpenProjectInTabCommand.Execute(project);
+            }
+        }
+
+        // ── Tab strip ────────────────────────────────────────────────────────
+        private void AllProjectsTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is ProjectsViewModel vm)
+                vm.BackToListCommand.Execute(null);
+        }
+
+        private void ProjectTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is ProjectsViewModel vm)
+            {
+                vm.ActivateTabCommand.Execute(tab);
+            }
+        }
+
+        // Middle-click a tab closes it (browser-style)
+        private void ProjectTab_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle &&
+                sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is ProjectsViewModel vm)
+            {
+                vm.CloseTabCommand.Execute(tab);
+                e.Handled = true;
+            }
+        }
+
+        private void ProjectTabClose_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is ProjectsViewModel vm)
+            {
+                vm.CloseTabCommand.Execute(tab);
+                e.Handled = true;
+            }
+        }
+
         private void ProjectSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter && DataContext is ProjectsViewModel vm)

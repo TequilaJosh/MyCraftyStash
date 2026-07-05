@@ -47,7 +47,57 @@
             </StackPanel>
         </Border>
         
-        <Grid Grid.Row="1">
+        <DockPanel Grid.Row="1">
+            <!-- Open-item tab strip: tabs for items opened via middle-click or
+                 right-click > Open in New Tab on a card -->
+            <Border DockPanel.Dock="Top" Padding="32,0,32,8"
+                    Visibility="{Binding ShowTabStrip, Converter={StaticResource BoolToVisConverter}}">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="14,7" Margin="0,0,6,0"
+                                Cursor="Hand" MouseLeftButtonUp="AllItemsTab_Click">
+                            <TextBlock Text="All Items" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding OpenTabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- Tab chip: click to view, middle-click or the x to close -->
+                                    <Border CornerRadius="6" Padding="12,7" Margin="0,0,6,0" Cursor="Hand"
+                                            MouseLeftButtonUp="ItemTab_Click"
+                                            MouseDown="ItemTab_MouseDown">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Title}" MaxWidth="180" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="✕" Margin="10,0,0,0" VerticalAlignment="Center" Cursor="Hand"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       MouseLeftButtonUp="ItemTabClose_Click"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Grid>
             <Grid Visibility="{Binding IsAddingItem, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
                 <Grid Visibility="{Binding IsViewingDetails, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
                     <Grid.RowDefinitions>
@@ -183,11 +233,17 @@
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource CardStyle}" 
-                                        Width="{DynamicResource CardBorderWidth}" 
-                                        Margin="0,0,16,16" 
+                                <Border Style="{StaticResource CardStyle}"
+                                        Width="{DynamicResource CardBorderWidth}"
+                                        Margin="0,0,16,16"
                                         Cursor="Hand"
-                                        MouseLeftButtonUp="ItemCard_Click">
+                                        MouseLeftButtonUp="ItemCard_Click"
+                                        MouseDown="ItemCard_MouseDown">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open in New Tab" Click="OpenItemInNewTab_Click"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
                                     <StackPanel>
                                         <Grid Height="{DynamicResource CardImageHeight}" Margin="0,0,0,12">
                                             <!-- White photo backdrop: product images are shot on white, so a
@@ -2335,10 +2391,11 @@
                     </DockPanel>
                 </Border>
             </Grid>
-        </Grid>
-        
-        <Border Grid.Row="0" Grid.RowSpan="2" 
-                Background="{DynamicResource OverlayDimBrush}" 
+            </Grid>
+        </DockPanel>
+
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                Background="{DynamicResource OverlayDimBrush}"
                 Visibility="Collapsed">
             <TextBlock Text="Loading..." 
                        Foreground="White" 

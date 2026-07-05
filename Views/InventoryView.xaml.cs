@@ -116,7 +116,67 @@ namespace MyCraftyStash.Views
                 }
             }
         }
-        
+
+        // Middle-click (mouse wheel button) on a card opens the item in a new tab
+        private void ItemCard_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle &&
+                sender is FrameworkElement element && element.DataContext is Item item &&
+                DataContext is InventoryViewModel vm)
+            {
+                vm.OpenItemInTabCommand.Execute(item);
+                e.Handled = true;
+            }
+        }
+
+        // Card right-click > "Open in New Tab" (ContextMenu inherits the card's Item DataContext)
+        private void OpenItemInNewTab_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is Item item &&
+                DataContext is InventoryViewModel vm)
+            {
+                vm.OpenItemInTabCommand.Execute(item);
+            }
+        }
+
+        // ── Tab strip ────────────────────────────────────────────────────────
+        private void AllItemsTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is InventoryViewModel vm)
+                vm.BackToListCommand.Execute(null);
+        }
+
+        private void ItemTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is InventoryViewModel vm)
+            {
+                vm.ActivateTabCommand.Execute(tab);
+            }
+        }
+
+        // Middle-click a tab closes it (browser-style)
+        private void ItemTab_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle &&
+                sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is InventoryViewModel vm)
+            {
+                vm.CloseTabCommand.Execute(tab);
+                e.Handled = true;
+            }
+        }
+
+        private void ItemTabClose_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is OpenTab tab &&
+                DataContext is InventoryViewModel vm)
+            {
+                vm.CloseTabCommand.Execute(tab);
+                e.Handled = true;
+            }
+        }
+
         private void RelatedItemCard_Click(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is Item item)

@@ -114,9 +114,11 @@ namespace MyCraftyStash.ViewModels
         private string? _currentDisplayImage;
         
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowTabStrip))]
         private bool _isAddingItem;
-        
+
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowTabStrip))]
         private bool _isEditingItem;
         
         [ObservableProperty]
@@ -557,6 +559,11 @@ namespace MyCraftyStash.ViewModels
             _service = service;
             _sentimentService = new SentimentService();
             _mainVM = mainVM;
+            OpenTabs.CollectionChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(HasOpenTabs));
+                OnPropertyChanged(nameof(ShowTabStrip));
+            };
             InitializeThemeCheckboxes();
             var purchasedFromOptions = _service.GetPurchasedFromOptions();
             purchasedFromOptions.Insert(0, string.Empty);
@@ -1068,6 +1075,66 @@ namespace MyCraftyStash.ViewModels
 
             // All data loaded - now show the view so Edit button becomes available
             IsViewingDetails = true;
+
+            // Highlight this item's tab (if it's open in one)
+            foreach (var tab in OpenTabs)
+                tab.IsActive = tab.Id == item.Id;
+        }
+
+        // ── Item tabs ────────────────────────────────────────────────────────
+        // Browser-style tabs: middle-click a card (or right-click > Open in New
+        // Tab) to bookmark an item without leaving the grid. Activating a tab
+        // reloads it through ViewItemDetails, reusing the single detail panel.
+        public ObservableCollection<OpenTab> OpenTabs { get; } = new();
+
+        public bool HasOpenTabs => OpenTabs.Count > 0;
+
+        // Hidden while the Add/Edit form is open so a stray tab click can't
+        // silently discard a half-filled form.
+        public bool ShowTabStrip => HasOpenTabs && !IsAddingItem && !IsEditingItem;
+
+        [RelayCommand]
+        private void OpenItemInTab(Item item)
+        {
+            if (!OpenTabs.Any(t => t.Id == item.Id))
+                OpenTabs.Add(new OpenTab { Id = item.Id, Title = item.Name, IsActive = IsViewingDetails && SelectedItem?.Id == item.Id });
+        }
+
+        [RelayCommand]
+        private async Task ActivateTab(OpenTab tab)
+        {
+            var item = await _service.GetItemByIdAsync(tab.Id);
+            if (item == null)
+            {
+                // Item was deleted since the tab was opened - drop the tab.
+                CloseTab(tab);
+                return;
+            }
+            tab.Title = item.Name;
+            await ViewItemDetails(item);
+        }
+
+        [RelayCommand]
+        private void CloseTab(OpenTab tab)
+        {
+            int index = OpenTabs.IndexOf(tab);
+            OpenTabs.Remove(tab);
+
+            // If the closed tab was on screen, fall to a neighbor tab or the list.
+            if (IsViewingDetails && SelectedItem?.Id == tab.Id)
+            {
+                if (OpenTabs.Count > 0)
+                    _ = ActivateTab(OpenTabs[Math.Min(Math.Max(index, 0), OpenTabs.Count - 1)]);
+                else
+                    BackToList();
+            }
+        }
+
+        private void CloseTabForItem(int itemId)
+        {
+            var tab = OpenTabs.FirstOrDefault(t => t.Id == itemId);
+            if (tab != null)
+                OpenTabs.Remove(tab);
         }
         
         private async Task LoadSentimentImages(int itemId)
@@ -1260,6 +1327,8 @@ namespace MyCraftyStash.ViewModels
             IsAddingItem = false;
             IsEditingItem = false;
             SelectedItem = null;
+            foreach (var tab in OpenTabs)
+                tab.IsActive = false;
         }
         
         [RelayCommand]
@@ -2224,6 +2293,7 @@ namespace MyCraftyStash.ViewModels
             try
             {
                 await _service.DeleteItemAsync(item.Id);
+                CloseTabForItem(item.Id);
                 _itemLookupList.RemoveAll(l => l.Id == item.Id);
                 ThumbnailCacheService.InvalidateItem(item.Id);
                 _cachedItemsList = null;

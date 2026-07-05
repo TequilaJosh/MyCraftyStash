@@ -99,9 +99,13 @@ namespace MyCraftyStash.ViewModels
             OnPropertyChanged(nameof(HasSearchItemOptions));
             _ = LoadProjects();
         }
-        [ObservableProperty] private bool _isAddingProject;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowTabStrip))]
+        private bool _isAddingProject;
         [ObservableProperty] private bool _isViewingDetails;
-        [ObservableProperty] private bool _isEditingProject;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowTabStrip))]
+        private bool _isEditingProject;
         [ObservableProperty] private ObservableCollection<ProjectImage> _projectImages = new();
         [ObservableProperty] private int _currentImageIndex;
         [ObservableProperty] private string? _currentDisplayImage;
@@ -282,7 +286,68 @@ namespace MyCraftyStash.ViewModels
         {
             _service = service;
             _mainVM = mainVM;
+            OpenTabs.CollectionChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(HasOpenTabs));
+                OnPropertyChanged(nameof(ShowTabStrip));
+            };
             InitSearchFilterTypeItems();
+        }
+
+        // ── Project tabs ─────────────────────────────────────────────────────
+        // Browser-style tabs: middle-click a card (or right-click > Open in New
+        // Tab) to bookmark a project without leaving the grid. Activating a tab
+        // reloads it through ViewProjectDetails, reusing the single detail panel.
+        public ObservableCollection<OpenTab> OpenTabs { get; } = new();
+
+        public bool HasOpenTabs => OpenTabs.Count > 0;
+
+        // Hidden while the Add/Edit form is open so a stray tab click can't
+        // silently discard a half-filled form.
+        public bool ShowTabStrip => HasOpenTabs && !IsAddingProject && !IsEditingProject;
+
+        [RelayCommand]
+        private void OpenProjectInTab(Project project)
+        {
+            if (!OpenTabs.Any(t => t.Id == project.Id))
+                OpenTabs.Add(new OpenTab { Id = project.Id, Title = project.Name, IsActive = IsViewingDetails && SelectedProject?.Id == project.Id });
+        }
+
+        [RelayCommand]
+        private async Task ActivateTab(OpenTab tab)
+        {
+            var project = await _service.GetProjectAsync(tab.Id);
+            if (project == null)
+            {
+                // Project was deleted since the tab was opened - drop the tab.
+                CloseTab(tab);
+                return;
+            }
+            tab.Title = project.Name;
+            await ViewProjectDetails(project);
+        }
+
+        [RelayCommand]
+        private void CloseTab(OpenTab tab)
+        {
+            int index = OpenTabs.IndexOf(tab);
+            OpenTabs.Remove(tab);
+
+            // If the closed tab was on screen, fall to a neighbor tab or the list.
+            if (IsViewingDetails && SelectedProject?.Id == tab.Id)
+            {
+                if (OpenTabs.Count > 0)
+                    _ = ActivateTab(OpenTabs[Math.Min(Math.Max(index, 0), OpenTabs.Count - 1)]);
+                else
+                    BackToList();
+            }
+        }
+
+        private void CloseTabForProject(int projectId)
+        {
+            var tab = OpenTabs.FirstOrDefault(t => t.Id == projectId);
+            if (tab != null)
+                OpenTabs.Remove(tab);
         }
 
         [RelayCommand]
@@ -317,6 +382,10 @@ namespace MyCraftyStash.ViewModels
             IsViewingDetails = true;
             IsAddingProject = false;
             IsAddingCreation = false;
+
+            // Highlight this project's tab (if it's open in one)
+            foreach (var tab in OpenTabs)
+                tab.IsActive = tab.Id == project.Id;
 
             var images = await _service.GetProjectImagesAsync(project.Id);
             ProjectImages = new ObservableCollection<ProjectImage>(images);
@@ -372,6 +441,8 @@ namespace MyCraftyStash.ViewModels
             IsAddingProject = false;
             IsAddingCreation = false;
             SelectedProject = null;
+            foreach (var tab in OpenTabs)
+                tab.IsActive = false;
         }
 
         public Task StartAddProject()
@@ -687,7 +758,7 @@ namespace MyCraftyStash.ViewModels
             if (result != MessageBoxResult.Yes) return;
 
             IsLoading = true;
-            try { await _service.DeleteProjectAsync(project.Id); await LoadProjects(); BackToList(); }
+            try { await _service.DeleteProjectAsync(project.Id); CloseTabForProject(project.Id); await LoadProjects(); BackToList(); }
             catch (Exception ex) { ErrorMessage = ex.Message; }
             finally { IsLoading = false; }
         }
