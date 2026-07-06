@@ -198,39 +198,36 @@
                                                 Padding="12"
                                                 Margin="0,4,0,0">
                                             <StackPanel MinWidth="240" MaxWidth="440">
-                                                <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
-                                                    <StackPanel>
-                                                        <ItemsControl ItemsSource="{Binding TypeFilterOptions}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <CheckBox IsChecked="{Binding IsChecked}"
-                                                                              Content="{Binding Label}"
-                                                                              Foreground="{DynamicResource TextBrush}"
-                                                                              Margin="0,4"
-                                                                              Cursor="Hand"/>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                        <!-- Subtype chips for the checked types -->
-                                                        <TextBlock Text="Subtypes"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                                   Margin="0,10,0,8"
-                                                                   Visibility="{Binding HasDraftSubtypeOptions, Converter={StaticResource BoolToVisConverter}}"/>
-                                                        <ItemsControl ItemsSource="{Binding DraftSubtypeOptions}"
-                                                                      Visibility="{Binding HasDraftSubtypeOptions, Converter={StaticResource BoolToVisConverter}}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <ToggleButton Style="{StaticResource FilterChip}"
-                                                                                  IsChecked="{Binding IsChecked}"
-                                                                                  Content="{Binding Label}"/>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                <!-- Subtype chips pinned at the top; the type list scrolls below them -->
+                                                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
+                                                              Visibility="{Binding HasDraftSubtypeOptions, Converter={StaticResource BoolToVisConverter}}">
+                                                    <ItemsControl ItemsSource="{Binding DraftSubtypeOptions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <ToggleButton Style="{StaticResource FilterChip}"
+                                                                              IsChecked="{Binding IsChecked}"
+                                                                              Content="{Binding Label}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,2,0,8"
+                                                        Visibility="{Binding HasDraftSubtypeOptions, Converter={StaticResource BoolToVisConverter}}"/>
+                                                <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding TypeFilterOptions}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox IsChecked="{Binding IsChecked}"
+                                                                          Content="{Binding Label}"
+                                                                          Foreground="{DynamicResource TextBrush}"
+                                                                          Margin="0,4"
+                                                                          Cursor="Hand"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                 </ScrollViewer>
                                                 <Button Style="{StaticResource PrimaryButton}"
                                                         Content="Confirm"
