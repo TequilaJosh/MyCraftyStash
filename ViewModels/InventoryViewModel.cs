@@ -791,6 +791,7 @@ namespace MyCraftyStash.ViewModels
                     SearchThemeFilters.Add(cb);
                 }
                 OnPropertyChanged(nameof(HasSearchThemeFilters));
+                UpdateTypeFilterSummary();
                 TriggerSearch();
             }
             else
@@ -799,6 +800,7 @@ namespace MyCraftyStash.ViewModels
                 OnPropertyChanged(nameof(HasSearchThemeFilters));
                 // Restore the subtype chips for the selected types.
                 RebuildSubtypeChips();
+                UpdateTypeFilterSummary();
                 TriggerSearch();
             }
         }
@@ -817,25 +819,99 @@ namespace MyCraftyStash.ViewModels
 
         private List<string> _selectedTypes = new();
 
+        // Subtype chips shown inside the dropdown for whichever types are
+        // currently checked; applied to the real filter on Confirm.
+        public ObservableCollection<SubtypeCheckboxItem> DraftSubtypeOptions { get; } = new();
+
+        public bool HasDraftSubtypeOptions => DraftSubtypeOptions.Count > 0;
+
         partial void OnIsTypeDropdownOpenChanged(bool value)
         {
             if (!value) return;
             // Rebuild on every open so new types show up and checks match the filter.
             TypeFilterOptions.Clear();
             foreach (var t in ItemTypes)
-                TypeFilterOptions.Add(new SubtypeCheckboxItem { Label = t, IsChecked = _selectedTypes.Contains(t) });
+            {
+                var cb = new SubtypeCheckboxItem { Label = t, IsChecked = _selectedTypes.Contains(t) };
+                cb.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(SubtypeCheckboxItem.IsChecked))
+                        RebuildDraftSubtypeChips();
+                };
+                TypeFilterOptions.Add(cb);
+            }
+            RebuildDraftSubtypeChips();
+        }
+
+        /// <summary>Refreshes the subtype chips inside the dropdown to the union of
+        /// the checked types' subtypes, preserving still-valid checked chips.</summary>
+        private void RebuildDraftSubtypeChips()
+        {
+            var checkedTypes = TypeFilterOptions.Where(t => t.IsChecked).Select(t => t.Label).ToList();
+            var prevChecked = DraftSubtypeOptions.Where(s => s.IsChecked).Select(s => s.Label)
+                .Concat(SearchSubtypeFilters.Where(s => s.IsChecked).Select(s => s.Label))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            DraftSubtypeOptions.Clear();
+
+            if (checkedTypes.Count == 1 && checkedTypes[0] == "Combo Club")
+            {
+                // Editions are derived dynamically from existing item themes
+                _ = LoadComboClubEditionsIntoDraftAsync(prevChecked);
+                OnPropertyChanged(nameof(HasDraftSubtypeOptions));
+                return;
+            }
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var type in checkedTypes.Where(t => t != "Combo Club"))
+            {
+                foreach (var s in UserSettingsService.GetSubtypesForType(type))
+                {
+                    if (seen.Add(s))
+                        DraftSubtypeOptions.Add(new SubtypeCheckboxItem { Label = s, IsChecked = prevChecked.Contains(s) });
+                }
+            }
+            OnPropertyChanged(nameof(HasDraftSubtypeOptions));
+        }
+
+        private async Task LoadComboClubEditionsIntoDraftAsync(HashSet<string> prevChecked)
+        {
+            try
+            {
+                var editions = await _service.GetComboClubEditionsAsync();
+                DraftSubtypeOptions.Clear();
+                foreach (var ed in editions)
+                    DraftSubtypeOptions.Add(new SubtypeCheckboxItem { Label = ed, IsChecked = prevChecked.Contains(ed) });
+                OnPropertyChanged(nameof(HasDraftSubtypeOptions));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError(ex, "LoadComboClubEditionsIntoDraftAsync");
+            }
         }
 
         [RelayCommand]
         private void ConfirmTypeFilter()
         {
             _selectedTypes = TypeFilterOptions.Where(t => t.IsChecked).Select(t => t.Label).ToList();
-            TypeFilterSummary = _selectedTypes.Count == 0 ? "All Types"
-                : _selectedTypes.Count == 1 ? _selectedTypes[0]
-                : $"{_selectedTypes[0]} +{_selectedTypes.Count - 1}";
+
+            // Apply the draft subtype chips as the live subtype filter.
+            SearchSubtypeFilters.Clear();
+            foreach (var d in DraftSubtypeOptions)
+                SearchSubtypeFilters.Add(new SubtypeCheckboxItem { Label = d.Label, IsChecked = d.IsChecked });
+            OnPropertyChanged(nameof(HasSearchSubtypeFilters));
+
+            UpdateTypeFilterSummary();
             IsTypeDropdownOpen = false;
-            RebuildSubtypeChips();
             TriggerSearch();
+        }
+
+        private void UpdateTypeFilterSummary()
+        {
+            var subCount = SearchSubtypeFilters.Count(s => s.IsChecked);
+            TypeFilterSummary = (_selectedTypes.Count == 0 ? "All Types"
+                : _selectedTypes.Count == 1 ? _selectedTypes[0]
+                : $"{_selectedTypes[0]} +{_selectedTypes.Count - 1}")
+                + (subCount > 0 ? $" · {subCount} subtype{(subCount == 1 ? "" : "s")}" : "");
         }
 
         /// <summary>Repopulates the subtype chip strip with the subtypes of every
