@@ -701,7 +701,7 @@ namespace MyCraftyStash.ViewModels
         {
             var selectedSubtypes = SearchSubtypeFilters.Where(s => s.IsChecked).Select(s => s.Label).ToList();
             var selectedThemes = SearchThemeFilters.Where(s => s.IsChecked).Select(s => s.Label).ToList();
-            bool hasFilters = !string.IsNullOrWhiteSpace(SearchText) || SelectedType != null || SelectedTheme != null || NoPictureOnly || DiscontinuedOnly || selectedSubtypes.Count > 0 || selectedThemes.Count > 0;
+            bool hasFilters = !string.IsNullOrWhiteSpace(SearchText) || SelectedType != null || _selectedTypes.Count > 0 || SelectedTheme != null || NoPictureOnly || DiscontinuedOnly || selectedSubtypes.Count > 0 || selectedThemes.Count > 0;
             
             if (!_itemsAreDirty && !hasFilters && _cachedItemsList != null && Items.Count > 0)
             {
@@ -713,7 +713,12 @@ namespace MyCraftyStash.ViewModels
             {
                 IsLoading = true;
                 string? searchMode = SearchByName ? "name" : SearchByTheme ? "theme" : null;
-                var items = await _service.GetItemsAsync(SearchText, SelectedType, SelectedTheme, searchMode: searchMode, noPictureOnly: NoPictureOnly, subtypes: selectedSubtypes.Count > 0 ? selectedSubtypes : null, themes: selectedThemes.Count > 0 ? selectedThemes : null, discontinuedOnly: DiscontinuedOnly);
+                // A single selected type goes through the legacy `type` parameter so
+                // its special cases (Combo Club editions) keep working; two or more
+                // go through the `types` list.
+                string? singleType = _selectedTypes.Count == 1 ? _selectedTypes[0] : SelectedType;
+                var typeList = _selectedTypes.Count > 1 ? _selectedTypes : null;
+                var items = await _service.GetItemsAsync(SearchText, singleType, SelectedTheme, searchMode: searchMode, noPictureOnly: NoPictureOnly, subtypes: selectedSubtypes.Count > 0 ? selectedSubtypes : null, themes: selectedThemes.Count > 0 ? selectedThemes : null, types: typeList, discontinuedOnly: DiscontinuedOnly);
                 Items = new ObservableCollection<Item>(items);
                 
                 // Kick off background thumbnail preloading so images are ready when user scrolls
@@ -792,8 +797,9 @@ namespace MyCraftyStash.ViewModels
             {
                 SearchThemeFilters.Clear();
                 OnPropertyChanged(nameof(HasSearchThemeFilters));
-                // Restore the subtype chips for the selected type (also searches).
-                OnSelectedTypeChanged(SelectedType);
+                // Restore the subtype chips for the selected types.
+                RebuildSubtypeChips();
+                TriggerSearch();
             }
         }
 
@@ -801,32 +807,65 @@ namespace MyCraftyStash.ViewModels
 
         partial void OnDiscontinuedOnlyChanged(bool value) => TriggerSearch();
 
-        partial void OnSelectedTypeChanged(string? value)
+        // ── Multi-select type filter ─────────────────────────────────────────
+        // The Type dropdown is a checkbox popup that stays open until Confirm,
+        // so several types can be picked in one go.
+        public ObservableCollection<SubtypeCheckboxItem> TypeFilterOptions { get; } = new();
+
+        [ObservableProperty] private bool _isTypeDropdownOpen;
+        [ObservableProperty] private string _typeFilterSummary = "All Types";
+
+        private List<string> _selectedTypes = new();
+
+        partial void OnIsTypeDropdownOpenChanged(bool value)
+        {
+            if (!value) return;
+            // Rebuild on every open so new types show up and checks match the filter.
+            TypeFilterOptions.Clear();
+            foreach (var t in ItemTypes)
+                TypeFilterOptions.Add(new SubtypeCheckboxItem { Label = t, IsChecked = _selectedTypes.Contains(t) });
+        }
+
+        [RelayCommand]
+        private void ConfirmTypeFilter()
+        {
+            _selectedTypes = TypeFilterOptions.Where(t => t.IsChecked).Select(t => t.Label).ToList();
+            TypeFilterSummary = _selectedTypes.Count == 0 ? "All Types"
+                : _selectedTypes.Count == 1 ? _selectedTypes[0]
+                : $"{_selectedTypes[0]} +{_selectedTypes.Count - 1}";
+            IsTypeDropdownOpen = false;
+            RebuildSubtypeChips();
+            TriggerSearch();
+        }
+
+        /// <summary>Repopulates the subtype chip strip with the subtypes of every
+        /// selected type (union, deduped). No-op in "Theme only" mode.</summary>
+        private void RebuildSubtypeChips()
         {
             SearchSubtypeFilters.Clear();
             OnPropertyChanged(nameof(HasSearchSubtypeFilters));
 
-            // In "Theme only" mode the chip row shows themes, not subtypes.
-            if (!string.IsNullOrEmpty(value) && !SearchByTheme)
-            {
-                if (value == "Combo Club")
-                {
-                    // Editions are derived dynamically from existing item themes
-                    if (!_suppressSearch) _ = LoadComboClubEditionsAsync();
-                    return;
-                }
+            if (SearchByTheme || _selectedTypes.Count == 0) return;
 
-                var subs = UserSettingsService.GetSubtypesForType(value);
-                foreach (var s in subs)
+            if (_selectedTypes.Count == 1 && _selectedTypes[0] == "Combo Club")
+            {
+                // Editions are derived dynamically from existing item themes
+                if (!_suppressSearch) _ = LoadComboClubEditionsAsync();
+                return;
+            }
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var type in _selectedTypes.Where(t => t != "Combo Club"))
+            {
+                foreach (var s in UserSettingsService.GetSubtypesForType(type))
                 {
+                    if (!seen.Add(s)) continue;
                     var cb = new SubtypeCheckboxItem { Label = s };
                     cb.PropertyChanged += (_, _) => TriggerSearch();
                     SearchSubtypeFilters.Add(cb);
                 }
-                OnPropertyChanged(nameof(HasSearchSubtypeFilters));
             }
-
-            TriggerSearch();
+            OnPropertyChanged(nameof(HasSearchSubtypeFilters));
         }
 
         private async Task LoadComboClubEditionsAsync()
@@ -1041,6 +1080,8 @@ namespace MyCraftyStash.ViewModels
                 DiscontinuedOnly = false;
                 SelectedType = null;
                 SelectedTheme = null;
+                _selectedTypes.Clear();
+                TypeFilterSummary = "All Types";
                 SearchSubtypeFilters.Clear();
                 OnPropertyChanged(nameof(HasSearchSubtypeFilters));
                 _suppressSearch = false;
@@ -1072,6 +1113,8 @@ namespace MyCraftyStash.ViewModels
             DiscontinuedOnly = false;
             SelectedType = null;
             SelectedTheme = null;
+            _selectedTypes.Clear();
+            TypeFilterSummary = "All Types";
             SearchSubtypeFilters.Clear();
             OnPropertyChanged(nameof(HasSearchSubtypeFilters));
             _suppressSearch = false;

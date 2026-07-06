@@ -26,6 +26,38 @@
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <!-- Filter chip: pill-shaped toggle used by the subtype/theme filter strips
+             under the search bar. Fills with the accent color when selected. -->
+        <Style x:Key="FilterChip" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ChipBorder" CornerRadius="14" Padding="12,5"
+                                Background="{DynamicResource CardBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderBrush}">
+                            <TextBlock x:Name="ChipText" Text="{TemplateBinding Content}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChipBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ChipBorder" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                <Setter TargetName="ChipBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                <Setter TargetName="ChipText" Property="Foreground" Value="White"/>
+                                <Setter TargetName="ChipText" Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -128,17 +160,65 @@
                                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                          VerticalAlignment="Center"
                                          KeyDown="SearchTextBox_KeyDown"/>
-                                <ComboBox Grid.Column="2"
-                                          ItemsSource="{Binding ItemTypes}"
-                                          SelectedItem="{Binding SelectedType}"
-                                          VerticalContentAlignment="Center"
-                                          VerticalAlignment="Center">
-                                    <ComboBox.ItemContainerStyle>
-                                        <Style TargetType="ComboBoxItem">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        </Style>
-                                    </ComboBox.ItemContainerStyle>
-                                </ComboBox>
+                                <!-- Multi-select type filter: checkbox popup that stays open until Confirm -->
+                                <Grid Grid.Column="2" VerticalAlignment="Center">
+                                    <ToggleButton x:Name="TypeFilterButton"
+                                                  IsChecked="{Binding IsTypeDropdownOpen}"
+                                                  Cursor="Hand"
+                                                  Height="50">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border Background="{DynamicResource CardBrush}"
+                                                        BorderBrush="{DynamicResource BorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Padding="12,0">
+                                                    <DockPanel VerticalAlignment="Center">
+                                                        <TextBlock DockPanel.Dock="Right" Text="▾"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                                   Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding TypeFilterSummary}"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <Popup IsOpen="{Binding IsTypeDropdownOpen}"
+                                           StaysOpen="True"
+                                           PlacementTarget="{Binding ElementName=TypeFilterButton}"
+                                           Placement="Bottom"
+                                           AllowsTransparency="True">
+                                        <Border Background="{DynamicResource CardBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="12"
+                                                Margin="0,4,0,0">
+                                            <StackPanel MinWidth="220">
+                                                <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding TypeFilterOptions}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox IsChecked="{Binding IsChecked}"
+                                                                          Content="{Binding Label}"
+                                                                          Foreground="{DynamicResource TextBrush}"
+                                                                          Margin="0,4"
+                                                                          Cursor="Hand"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                                <Button Style="{StaticResource PrimaryButton}"
+                                                        Content="Confirm"
+                                                        Command="{Binding ConfirmTypeFilterCommand}"
+                                                        Margin="0,10,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
                                 <Button Grid.Column="4"
                                         Style="{StaticResource PrimaryButton}"
                                         Content="Search"
@@ -183,36 +263,33 @@
                                               Cursor="Hand"/>
                                 </StackPanel>
                             </Grid>
+                            <!-- Subtype chip strip: populated with the subtypes of the selected type -->
                             <ItemsControl ItemsSource="{Binding SearchSubtypeFilters}"
                                           Visibility="{Binding HasSearchSubtypeFilters, Converter={StaticResource BoolToVisConverter}}"
-                                          Margin="0,10,0,0">
+                                          Margin="0,10,0,-8">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox IsChecked="{Binding IsChecked}"
-                                                  Content="{Binding Label}"
-                                                  Foreground="{DynamicResource TextBrush}"
-                                                  Margin="0,0,16,0"
-                                                  Cursor="Hand"/>
+                                        <ToggleButton Style="{StaticResource FilterChip}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Content="{Binding Label}"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <!-- Theme chips replace the subtype chips while "Theme only" is checked -->
                             <ItemsControl ItemsSource="{Binding SearchThemeFilters}"
                                           Visibility="{Binding HasSearchThemeFilters, Converter={StaticResource BoolToVisConverter}}"
-                                          Margin="0,10,0,0">
+                                          Margin="0,10,0,-8">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox IsChecked="{Binding IsChecked}"
-                                                  Content="{Binding Label}"
-                                                  Foreground="{DynamicResource TextBrush}"
-                                                  Margin="0,0,16,4"
-                                                  Cursor="Hand"/>
+                                        <ToggleButton Style="{StaticResource FilterChip}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Content="{Binding Label}"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

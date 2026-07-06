@@ -307,7 +307,7 @@ namespace MyCraftyStash.Services
             return bestIndex >= 0 ? bestIndex : int.MaxValue;
         }
         
-        public async Task<List<Item>> GetItemsAsync(string? search = null, string? type = null, string? theme = null, string? sentiment = null, string? searchMode = null, bool noPictureOnly = false, List<string>? subtypes = null, List<string>? themes = null, bool discontinuedOnly = false)
+        public async Task<List<Item>> GetItemsAsync(string? search = null, string? type = null, string? theme = null, string? sentiment = null, string? searchMode = null, bool noPictureOnly = false, List<string>? subtypes = null, List<string>? themes = null, List<string>? types = null, bool discontinuedOnly = false)
         {
             try
             {
@@ -341,7 +341,16 @@ namespace MyCraftyStash.Services
                     else
                         query = query.Where(i => i.Type == type);
                 }
-                
+                else if (types != null && types.Count > 0)
+                {
+                    // Multi-type filter: match ANY selected type. "Combo Club" is
+                    // theme-based rather than a real Type, so it matches by theme.
+                    var includeComboClub = types.Contains("Combo Club");
+                    var normalTypes = types.Where(t => t != "Combo Club").ToList();
+                    query = query.Where(i => normalTypes.Contains(i.Type) ||
+                        (includeComboClub && i.Theme != null && i.Theme.Contains("Combo Club")));
+                }
+
                 if (!string.IsNullOrWhiteSpace(theme))
                 {
                     query = query.Where(i => i.Theme != null && i.Theme.ToLower().Contains(theme.ToLower()));
